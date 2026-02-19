@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Baseball Hit Sim</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <!-- Fallback import map: lets source run when served directly, while Vite build/dev still works. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="hud">
+      <div><strong>Controls:</strong> Left click on bat + drag mouse to swing</div>
+      <div><strong>Tip:</strong> Drag up/down for a little bat tilt • Press <kbd>R</kbd> to reset</div>
+      <div id="stats">Last hit: -- m/s | Distance: -- m</div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
