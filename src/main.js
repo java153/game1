@@ -4,54 +4,42 @@ import * as CANNON from 'cannon-es';
 // ------------------------------------------------------------
 // TUNING VARIABLES
 // ------------------------------------------------------------
-// Camera/zone tuning
-// - cameraFov: smaller value zooms out less distortion while still wide enough to see around zone.
-// - strikeZoneDistance/width/height/depth: first-person strike zone volume in front of camera.
-// PCI tuning
-// - pciSensitivity: mouse-to-PCI speed.
-// - pciRadius: visual size of PCI ring.
-// Swing tuning
-// - swingDurationMs: full animation length.
-// - swingCooldownMs: anti-spam delay between swings.
-// - contactWindowStart/End: normalized swing phase where contact can occur.
-// Hit tuning
-// - swingWindowZ / hitPlaneTolerance: timing leniency around strike zone plane.
-// - perfect/good thresholds: easier quality windows for alignment + bat proximity.
-// - impulse values: output power for weak/good/perfect contact.
 const config = {
-  cameraFov: 62,
+  cameraFov: 74,
 
-  strikeZoneDistance: 1.05,
-  strikeZoneWidth: 1.12,
-  strikeZoneHeight: 1.38,
-  strikeZoneDepth: 0.12,
+  strikeZoneDistance: 0.95,
+  strikeZoneWidth: 1.2,
+  strikeZoneHeight: 1.55,
+  strikeZoneDepth: 0.14,
 
   pciSensitivity: 0.0018,
-  pciRadius: 0.12,
+  pciRadius: 0.13,
 
-  swingDurationMs: 240,
-  swingCooldownMs: 340,
-  contactWindowStart: 0.26,
-  contactWindowEnd: 0.72,
+  swingDurationMs: 210,
+  swingCooldownMs: 380,
+  contactWindowStart: 0.22,
+  contactWindowEnd: 0.74,
 
-  pitchIntervalMs: 1100,
-  pitchSpeedMin: 25,
-  pitchSpeedMax: 32,
-  breakX: 1.7,
-  breakY: 1.1,
+  postSwingDelayMinMs: 1500,
+  postSwingDelayMaxMs: 2500,
 
-  swingWindowZ: 0.68,
-  hitPlaneTolerance: 0.5,
-  perfectPciDist: 0.22,
-  goodPciDist: 0.45,
-  perfectBatDist: 0.23,
-  goodBatDist: 0.42,
-  perfectTiming: 0.15,
-  goodTiming: 0.32,
+  pitchSpeedMin: 24,
+  pitchSpeedMax: 31,
+  breakX: 1.8,
+  breakY: 1.25,
 
-  weakImpulse: 3.1,
-  goodImpulse: 5.2,
-  perfectImpulse: 7.1,
+  swingWindowZ: 0.82,
+  hitPlaneTolerance: 0.62,
+  perfectPciDist: 0.3,
+  goodPciDist: 0.56,
+  perfectBatDist: 0.29,
+  goodBatDist: 0.53,
+  perfectTiming: 0.2,
+  goodTiming: 0.42,
+
+  weakImpulse: 3.4,
+  goodImpulse: 5.8,
+  perfectImpulse: 7.5,
 
   restitution: 0.5,
   friction: 0.33
@@ -64,7 +52,6 @@ const maxSubSteps = 5;
 // SCENE / CAMERA
 // ------------------------------------------------------------
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87a9cf);
 
 const camera = new THREE.PerspectiveCamera(
   config.cameraFov,
@@ -72,8 +59,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   350
 );
-camera.position.set(0, 1.62, 1.58);
-camera.lookAt(0, 1.34, -1.9);
+camera.position.set(0, 1.66, 2.18);
+camera.lookAt(0, 1.32, -1.7);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -82,9 +69,42 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xecf4ff, 0x2f4559, 0.95));
-const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+const sun = new THREE.DirectionalLight(0xffffff, 1.05);
 sun.position.set(14, 18, 10);
 scene.add(sun);
+
+// Sky gradient dome
+const skyGeo = new THREE.SphereGeometry(260, 32, 20);
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: {
+    topColor: { value: new THREE.Color(0x86b7ee) },
+    bottomColor: { value: new THREE.Color(0xe7f2ff) },
+    offset: { value: 12.0 },
+    exponent: { value: 0.9 }
+  },
+  vertexShader: `
+    varying vec3 vWorldPosition;
+    void main() {
+      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+      vWorldPosition = worldPosition.xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 topColor;
+    uniform vec3 bottomColor;
+    uniform float offset;
+    uniform float exponent;
+    varying vec3 vWorldPosition;
+    void main() {
+      float h = normalize(vWorldPosition + offset).y;
+      float t = max(pow(max(h, 0.0), exponent), 0.0);
+      gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0);
+    }
+  `
+});
+scene.add(new THREE.Mesh(skyGeo, skyMat));
 
 // ------------------------------------------------------------
 // SIMPLE STADIUM ENVIRONMENT
@@ -111,34 +131,47 @@ const plate = new THREE.Mesh(
 plate.position.set(0, 0.02, 0);
 scene.add(plate);
 
-const backstop = new THREE.Mesh(
-  new THREE.BoxGeometry(12, 6, 0.3),
-  new THREE.MeshStandardMaterial({ color: 0x33404e, roughness: 0.8 })
+const backstopWall = new THREE.Mesh(
+  new THREE.BoxGeometry(14, 7, 0.35),
+  new THREE.MeshStandardMaterial({ color: 0x2f3946, roughness: 0.78 })
 );
-backstop.position.set(0, 3, 2.9);
-scene.add(backstop);
+backstopWall.position.set(0, 3.5, 3.2);
+scene.add(backstopWall);
+
+const backstopNet = new THREE.Mesh(
+  new THREE.PlaneGeometry(13, 6.5),
+  new THREE.MeshBasicMaterial({ color: 0xaec4d8, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+);
+backstopNet.position.set(0, 3.45, 2.99);
+scene.add(backstopNet);
 
 const outfieldWall = new THREE.Mesh(
-  new THREE.CylinderGeometry(45, 45, 3.2, 80, 1, true, Math.PI * 0.08, Math.PI * 0.84),
+  new THREE.CylinderGeometry(45, 45, 3.5, 80, 1, true, Math.PI * 0.08, Math.PI * 0.84),
   new THREE.MeshStandardMaterial({ color: 0x244561, roughness: 0.82, side: THREE.DoubleSide })
 );
-outfieldWall.position.set(0, 1.6, -43);
+outfieldWall.position.set(0, 1.75, -43);
 scene.add(outfieldWall);
 
-const seatMaterial = new THREE.MeshStandardMaterial({ color: 0x5d6e86, roughness: 0.85 });
-for (let row = 0; row < 6; row++) {
-  const radius = 9 + row * 2.5;
-  const y = 1.1 + row * 0.8;
-  const steps = 26 + row * 2;
-  for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1);
-    const a = THREE.MathUtils.lerp(Math.PI * 0.12, Math.PI * 0.88, t);
-    const x = Math.cos(a) * radius;
-    const z = Math.sin(a) * radius + 2.5;
-    const block = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 1.2), seatMaterial);
-    block.position.set(x, y, z);
-    block.lookAt(0, y, 2.0);
-    scene.add(block);
+const seatingMats = [
+  new THREE.MeshStandardMaterial({ color: 0x54657e, roughness: 0.84 }),
+  new THREE.MeshStandardMaterial({ color: 0x6b5d7f, roughness: 0.84 }),
+  new THREE.MeshStandardMaterial({ color: 0x5f7c68, roughness: 0.84 })
+];
+for (let tier = 0; tier < 3; tier++) {
+  for (let row = 0; row < 4; row++) {
+    const radius = 10 + tier * 10 + row * 2.1;
+    const y = 1.1 + tier * 2.1 + row * 0.62;
+    const steps = 22 + row * 3;
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const a = THREE.MathUtils.lerp(Math.PI * 0.1, Math.PI * 0.9, t);
+      const x = Math.cos(a) * radius;
+      const z = Math.sin(a) * radius + 3.0;
+      const block = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 1.2), seatingMats[tier]);
+      block.position.set(x, y, z);
+      block.lookAt(0, y, 2.0);
+      scene.add(block);
+    }
   }
 }
 
@@ -146,22 +179,23 @@ for (let row = 0; row < 6; row++) {
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.34, camera.position.z - config.strikeZoneDistance),
+  center: new THREE.Vector3(0, 1.32, camera.position.z - config.strikeZoneDistance),
   width: config.strikeZoneWidth,
   height: config.strikeZoneHeight,
   depth: config.strikeZoneDepth
 };
 
+const zoneGeo = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
 const zoneFill = new THREE.Mesh(
-  new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth),
+  zoneGeo,
   new THREE.MeshBasicMaterial({ color: 0x66bbff, transparent: true, opacity: 0.14 })
 );
 zoneFill.position.copy(strikeZone.center);
 scene.add(zoneFill);
 
 const zoneEdges = new THREE.LineSegments(
-  new THREE.EdgesGeometry(new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth)),
-  new THREE.LineBasicMaterial({ color: 0xd3ecff })
+  new THREE.EdgesGeometry(zoneGeo),
+  new THREE.LineBasicMaterial({ color: 0xe3f3ff })
 );
 zoneEdges.position.copy(strikeZone.center);
 scene.add(zoneEdges);
@@ -172,7 +206,7 @@ const pciRing = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
 );
 const pciDot = new THREE.Mesh(
-  new THREE.CircleGeometry(0.024, 20),
+  new THREE.CircleGeometry(0.03, 20),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
 );
 pciGroup.add(pciRing, pciDot);
@@ -197,27 +231,32 @@ updatePciTransform();
 const batPivot = new THREE.Group();
 camera.add(batPivot);
 
-const batIdlePos = new THREE.Vector3(0.55, -0.29, -0.72);
-const batIdleRot = new THREE.Euler(-0.42, -1.04, 0.88);
-const batContactRot = new THREE.Euler(-0.02, 0.56, -0.52);
-const batFollowRot = new THREE.Euler(0.16, 1.08, -0.84);
+const batIdlePos = new THREE.Vector3(0.7, -0.44, -1.02);
+const batLoadPos = new THREE.Vector3(0.74, -0.48, -1.0);
+const batContactPos = new THREE.Vector3(0.1, -0.26, -0.9);
+const batFollowPos = new THREE.Vector3(-0.35, -0.12, -0.86);
+
+const batIdleRot = new THREE.Euler(-0.34, -1.2, 1.03);
+const batLoadRot = new THREE.Euler(-0.52, -1.38, 1.1);
+const batContactRot = new THREE.Euler(-0.1, -0.02, 0.22);
+const batFollowRot = new THREE.Euler(0.08, 0.86, -0.36);
 
 batPivot.position.copy(batIdlePos);
 batPivot.rotation.copy(batIdleRot);
 
 const batMesh = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.038, 0.058, 1.38, 18),
+  new THREE.CylinderGeometry(0.045, 0.065, 1.52, 18),
   new THREE.MeshStandardMaterial({ color: 0xc99660, roughness: 0.45, metalness: 0.02 })
 );
 batMesh.rotation.z = Math.PI / 2;
-batMesh.position.set(0.55, -0.05, -0.12);
+batMesh.position.set(0.64, -0.08, -0.18);
 batPivot.add(batMesh);
 
 const batCap = new THREE.Mesh(
-  new THREE.SphereGeometry(0.055, 16, 12),
+  new THREE.SphereGeometry(0.065, 16, 12),
   new THREE.MeshStandardMaterial({ color: 0xa97745, roughness: 0.5 })
 );
-batCap.position.set(-0.12, -0.05, -0.12);
+batCap.position.set(-0.1, -0.08, -0.18);
 batPivot.add(batCap);
 
 let isSwinging = false;
@@ -226,6 +265,8 @@ let nextSwingAllowedMs = 0;
 let swingUsedThisPitch = false;
 let swingContactResolved = false;
 let swingMissQueued = false;
+let nextPitchReadyAt = 0;
+let pitchInFlight = false;
 
 function smoothstep(t) {
   return t * t * (3 - 2 * t);
@@ -236,25 +277,38 @@ function updateBatSwing(nowMs) {
 
   const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / config.swingDurationMs, 0, 1);
 
-  // 3-stage arc: load->contact->follow-through->recover
-  if (t < 0.46) {
-    const a = smoothstep(t / 0.46);
-    batPivot.rotation.x = THREE.MathUtils.lerp(batIdleRot.x, batContactRot.x, a);
-    batPivot.rotation.y = THREE.MathUtils.lerp(batIdleRot.y, batContactRot.y, a);
-    batPivot.rotation.z = THREE.MathUtils.lerp(batIdleRot.z, batContactRot.z, a);
-    batPivot.position.lerpVectors(batIdlePos, new THREE.Vector3(0.53, -0.28, -0.68), a);
-  } else if (t < 0.78) {
-    const a = smoothstep((t - 0.46) / 0.32);
-    batPivot.rotation.x = THREE.MathUtils.lerp(batContactRot.x, batFollowRot.x, a);
-    batPivot.rotation.y = THREE.MathUtils.lerp(batContactRot.y, batFollowRot.y, a);
-    batPivot.rotation.z = THREE.MathUtils.lerp(batContactRot.z, batFollowRot.z, a);
-    batPivot.position.lerpVectors(new THREE.Vector3(0.53, -0.28, -0.68), new THREE.Vector3(0.5, -0.24, -0.64), a);
+  if (t < 0.22) {
+    const a = smoothstep(t / 0.22);
+    batPivot.rotation.set(
+      THREE.MathUtils.lerp(batIdleRot.x, batLoadRot.x, a),
+      THREE.MathUtils.lerp(batIdleRot.y, batLoadRot.y, a),
+      THREE.MathUtils.lerp(batIdleRot.z, batLoadRot.z, a)
+    );
+    batPivot.position.lerpVectors(batIdlePos, batLoadPos, a);
+  } else if (t < 0.62) {
+    const a = smoothstep((t - 0.22) / 0.4);
+    batPivot.rotation.set(
+      THREE.MathUtils.lerp(batLoadRot.x, batContactRot.x, a),
+      THREE.MathUtils.lerp(batLoadRot.y, batContactRot.y, a),
+      THREE.MathUtils.lerp(batLoadRot.z, batContactRot.z, a)
+    );
+    batPivot.position.lerpVectors(batLoadPos, batContactPos, a);
+  } else if (t < 0.86) {
+    const a = smoothstep((t - 0.62) / 0.24);
+    batPivot.rotation.set(
+      THREE.MathUtils.lerp(batContactRot.x, batFollowRot.x, a),
+      THREE.MathUtils.lerp(batContactRot.y, batFollowRot.y, a),
+      THREE.MathUtils.lerp(batContactRot.z, batFollowRot.z, a)
+    );
+    batPivot.position.lerpVectors(batContactPos, batFollowPos, a);
   } else {
-    const a = smoothstep((t - 0.78) / 0.22);
-    batPivot.rotation.x = THREE.MathUtils.lerp(batFollowRot.x, batIdleRot.x, a);
-    batPivot.rotation.y = THREE.MathUtils.lerp(batFollowRot.y, batIdleRot.y, a);
-    batPivot.rotation.z = THREE.MathUtils.lerp(batFollowRot.z, batIdleRot.z, a);
-    batPivot.position.lerpVectors(new THREE.Vector3(0.5, -0.24, -0.64), batIdlePos, a);
+    const a = smoothstep((t - 0.86) / 0.14);
+    batPivot.rotation.set(
+      THREE.MathUtils.lerp(batFollowRot.x, batIdleRot.x, a),
+      THREE.MathUtils.lerp(batFollowRot.y, batIdleRot.y, a),
+      THREE.MathUtils.lerp(batFollowRot.z, batIdleRot.z, a)
+    );
+    batPivot.position.lerpVectors(batFollowPos, batIdlePos, a);
   }
 
   const inContactPhase = t >= config.contactWindowStart && t <= config.contactWindowEnd;
@@ -269,13 +323,12 @@ function updateBatSwing(nowMs) {
     if (!swingContactResolved && swingMissQueued) {
       showResult('MISS');
     }
+    scheduleNextPitch();
   }
 }
 
 function getBatSweetSpotWorld() {
-  // near barrel end in bat local space
-  const p = new THREE.Vector3(1.15, -0.04, -0.12);
-  return batPivot.localToWorld(p);
+  return batPivot.localToWorld(new THREE.Vector3(1.2, -0.08, -0.18));
 }
 
 // ------------------------------------------------------------
@@ -426,9 +479,7 @@ function showResult(text, mph = null) {
 // ------------------------------------------------------------
 // PITCHING
 // ------------------------------------------------------------
-const spawnPos = new CANNON.Vec3(0, 1.5, -17.5);
-let pitchTimer = null;
-let ballWasHit = false;
+const spawnPos = new CANNON.Vec3(0, 1.48, -17.5);
 
 function randomPitchVelocity() {
   const r = Math.random();
@@ -459,26 +510,31 @@ function randomPitchVelocity() {
   return new CANNON.Vec3(toTarget.x * speed + breakX, toTarget.y * speed + breakY, toTarget.z * speed);
 }
 
-function resetAndPitch(delay = config.pitchIntervalMs) {
-  if (pitchTimer) clearTimeout(pitchTimer);
-
+function queueBallAtMound() {
   ballBody.position.copy(spawnPos);
   ballBody.velocity.setZero();
   ballBody.angularVelocity.setZero();
   ballBody.quaternion.set(0, 0, 0, 1);
 
   swingUsedThisPitch = false;
-  ballWasHit = false;
   swingContactResolved = false;
   swingMissQueued = false;
-
-  pitchTimer = setTimeout(() => {
-    ballBody.velocity.copy(randomPitchVelocity());
-    playPitchSound();
-  }, delay);
+  pitchInFlight = false;
 }
 
-resetAndPitch(550);
+function launchPitch() {
+  ballBody.velocity.copy(randomPitchVelocity());
+  pitchInFlight = true;
+  playPitchSound();
+}
+
+function scheduleNextPitch() {
+  queueBallAtMound();
+  const delay = THREE.MathUtils.lerp(config.postSwingDelayMinMs, config.postSwingDelayMaxMs, Math.random());
+  nextPitchReadyAt = performance.now() + delay;
+}
+
+scheduleNextPitch();
 
 // ------------------------------------------------------------
 // INPUT
@@ -501,16 +557,16 @@ window.addEventListener('keydown', (e) => {
     pciOffsetX = 0;
     pciOffsetY = 0;
     updatePciTransform();
-    resetAndPitch(120);
+    scheduleNextPitch();
     return;
   }
 
   if (key !== 'z') return;
 
   const now = performance.now();
-  ensureAudioContext(); // unlock audio on user gesture
+  ensureAudioContext();
 
-  if (now < nextSwingAllowedMs || isSwinging || swingUsedThisPitch) return;
+  if (now < nextSwingAllowedMs || isSwinging || swingUsedThisPitch || !pitchInFlight) return;
 
   isSwinging = true;
   swingStartMs = now;
@@ -547,16 +603,16 @@ function classifyContact(pciDist, timingDist, batDist) {
 
 function tryResolveContact() {
   const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.35) {
+  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.4) {
     return;
   }
 
   const pciDist = pciBallDistance();
-  if (pciDist > config.goodPciDist * 1.65) return;
+  if (pciDist > config.goodPciDist * 1.75) return;
 
   const sweetSpot = getBatSweetSpotWorld();
   const batDist = sweetSpot.distanceTo(ballMesh.position);
-  if (batDist > config.goodBatDist * 1.5) return;
+  if (batDist > config.goodBatDist * 1.6) return;
 
   swingContactResolved = true;
   swingMissQueued = false;
@@ -573,17 +629,16 @@ function tryResolveContact() {
 
   const hitDir = new CANNON.Vec3(
     xInfluence * 0.78,
-    0.78 + yInfluence * 0.58 + timingScale * 0.2,
-    1.04 - Math.abs(xInfluence) * 0.16
+    0.8 + yInfluence * 0.58 + timingScale * 0.2,
+    1.06 - Math.abs(xInfluence) * 0.16
   );
   hitDir.normalize();
-  hitDir.scale(impulseMag * (0.78 + timingScale * 0.35), hitDir);
+  hitDir.scale(impulseMag * (0.8 + timingScale * 0.35), hitDir);
 
   const preSpeed = ballBody.velocity.length();
   if (preSpeed > 42) ballBody.velocity.scale(42 / preSpeed, ballBody.velocity);
 
   ballBody.applyImpulse(hitDir, ballBody.position);
-  ballWasHit = true;
 
   const exitMph = ballBody.velocity.length() * 2.23694;
   showResult(quality, exitMph);
@@ -591,16 +646,17 @@ function tryResolveContact() {
 }
 
 function maybeAutoMiss() {
-  if (!swingUsedThisPitch && !ballWasHit && ballBody.position.z > strikeZone.center.z + 0.28) {
+  if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.35) {
     swingUsedThisPitch = true;
     showResult('MISS');
+    scheduleNextPitch();
   }
 }
 
 // ------------------------------------------------------------
 // LOOP HELPERS
 // ------------------------------------------------------------
-function shouldResetBall() {
+function shouldResetBallOutOfPlay() {
   return (
     ballBody.position.z > 16 ||
     Math.abs(ballBody.position.x) > 22 ||
@@ -636,10 +692,16 @@ function animate() {
   }
 
   const now = performance.now();
+  if (!pitchInFlight && now >= nextPitchReadyAt) {
+    launchPitch();
+  }
+
   updateBatSwing(now);
 
   maybeAutoMiss();
-  if (shouldResetBall()) resetAndPitch(config.pitchIntervalMs);
+  if (pitchInFlight && shouldResetBallOutOfPlay()) {
+    scheduleNextPitch();
+  }
 
   ballMesh.position.copy(ballBody.position);
   ballMesh.quaternion.copy(ballBody.quaternion);
