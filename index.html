@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>3D Baseball Hit Sim</title>
     <link rel="stylesheet" href="./src/style.css" />
-    <!-- Fallback import map: lets source run when served directly, while Vite build/dev still works. -->
+    <!-- Fallback import map for root-source hosting; Vite build/dev still works -->
     <script type="importmap">
       {
         "imports": {
@@ -17,9 +17,10 @@
   </head>
   <body>
     <div id="hud">
-      <div><strong>Controls:</strong> Left click on bat + drag mouse to swing</div>
-      <div><strong>Tip:</strong> Drag up/down for a little bat tilt • Press <kbd>R</kbd> to reset</div>
-      <div id="stats">Last hit: -- m/s | Distance: -- m</div>
+      <div class="title">PCI Hitting Sim</div>
+      <div>Move mouse to position PCI. Left click to swing. Press <kbd>R</kbd> to reset.</div>
+      <div id="status">TRACK THE BALL</div>
+      <div id="details"></div>
     </div>
     <script type="module" src="./src/main.js"></script>
   </body>
