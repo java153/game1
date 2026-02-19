@@ -14,27 +14,27 @@ const baseConfig = {
 
   pciRadius: 0.13,
 
-  swingDurationMs: 260,
-  swingCooldownMs: 520,
+  swingDurationMs: 300,
+  swingCooldownMs: 620,
   contactWindowStart: 0.16,
   contactWindowEnd: 0.84,
 
-  postSwingDelayMinMs: 2100,
-  postSwingDelayMaxMs: 3200,
+  postSwingDelayMinMs: 2500,
+  postSwingDelayMaxMs: 3600,
 
-  pitchSpeedMin: 18,
-  pitchSpeedMax: 24,
-  breakX: 1.2,
-  breakY: 0.8,
+  pitchSpeedMin: 14,
+  pitchSpeedMax: 19,
+  breakX: 0.8,
+  breakY: 0.45,
 
-  swingWindowZ: 1.22,
-  hitPlaneTolerance: 0.98,
-  perfectPciDist: 0.52,
-  goodPciDist: 0.94,
-  perfectBatDist: 0.5,
-  goodBatDist: 0.92,
-  perfectTiming: 0.4,
-  goodTiming: 0.8,
+  swingWindowZ: 1.5,
+  hitPlaneTolerance: 1.18,
+  perfectPciDist: 0.7,
+  goodPciDist: 1.12,
+  perfectBatDist: 0.68,
+  goodBatDist: 1.18,
+  perfectTiming: 0.62,
+  goodTiming: 1.02,
 
   weakImpulse: 3.6,
   goodImpulse: 6.0,
@@ -47,60 +47,60 @@ const baseConfig = {
 const difficultyProfiles = {
   easy: {
     name: 'EASY',
-    pitchSpeedMin: 11,
-    pitchSpeedMax: 15,
-    breakX: 0.45,
-    breakY: 0.25,
-    swingDurationMs: 320,
-    swingCooldownMs: 640,
-    postSwingDelayMinMs: 2600,
-    postSwingDelayMaxMs: 3600,
-    swingWindowZ: 1.55,
-    hitPlaneTolerance: 1.2,
-    perfectPciDist: 0.68,
-    goodPciDist: 1.05,
-    perfectBatDist: 0.62,
-    goodBatDist: 1.12,
-    perfectTiming: 0.56,
-    goodTiming: 0.98
+    pitchSpeedMin: 9,
+    pitchSpeedMax: 13,
+    breakX: 0.2,
+    breakY: 0.1,
+    swingDurationMs: 360,
+    swingCooldownMs: 720,
+    postSwingDelayMinMs: 3000,
+    postSwingDelayMaxMs: 4200,
+    swingWindowZ: 1.85,
+    hitPlaneTolerance: 1.45,
+    perfectPciDist: 0.92,
+    goodPciDist: 1.35,
+    perfectBatDist: 0.9,
+    goodBatDist: 1.45,
+    perfectTiming: 0.82,
+    goodTiming: 1.25
   },
   normal: {
     name: 'NORMAL',
-    pitchSpeedMin: 16,
-    pitchSpeedMax: 21,
-    breakX: 0.9,
-    breakY: 0.6,
-    swingDurationMs: 285,
-    swingCooldownMs: 560,
-    postSwingDelayMinMs: 2300,
-    postSwingDelayMaxMs: 3300,
-    swingWindowZ: 1.38,
-    hitPlaneTolerance: 1.08,
-    perfectPciDist: 0.6,
-    goodPciDist: 0.98,
-    perfectBatDist: 0.56,
-    goodBatDist: 1.02,
-    perfectTiming: 0.48,
-    goodTiming: 0.9
+    pitchSpeedMin: 12,
+    pitchSpeedMax: 17,
+    breakX: 0.45,
+    breakY: 0.25,
+    swingDurationMs: 330,
+    swingCooldownMs: 660,
+    postSwingDelayMinMs: 2700,
+    postSwingDelayMaxMs: 3800,
+    swingWindowZ: 1.68,
+    hitPlaneTolerance: 1.3,
+    perfectPciDist: 0.82,
+    goodPciDist: 1.22,
+    perfectBatDist: 0.8,
+    goodBatDist: 1.3,
+    perfectTiming: 0.72,
+    goodTiming: 1.08
   },
   hard: {
     name: 'HARD',
-    pitchSpeedMin: 19,
-    pitchSpeedMax: 25,
-    breakX: 1.2,
-    breakY: 0.85,
-    swingDurationMs: 245,
-    swingCooldownMs: 470,
-    postSwingDelayMinMs: 1800,
-    postSwingDelayMaxMs: 2600,
-    swingWindowZ: 1.12,
-    hitPlaneTolerance: 0.9,
-    perfectPciDist: 0.46,
-    goodPciDist: 0.82,
-    perfectBatDist: 0.43,
-    goodBatDist: 0.8,
-    perfectTiming: 0.35,
-    goodTiming: 0.66
+    pitchSpeedMin: 14,
+    pitchSpeedMax: 20,
+    breakX: 0.8,
+    breakY: 0.4,
+    swingDurationMs: 285,
+    swingCooldownMs: 560,
+    postSwingDelayMinMs: 2200,
+    postSwingDelayMaxMs: 3200,
+    swingWindowZ: 1.38,
+    hitPlaneTolerance: 1.1,
+    perfectPciDist: 0.68,
+    goodPciDist: 1.05,
+    perfectBatDist: 0.62,
+    goodBatDist: 1.0,
+    perfectTiming: 0.56,
+    goodTiming: 0.88
   }
 };
 
@@ -112,6 +112,7 @@ function setDifficulty(mode) {
   currentDifficulty = mode;
   activeConfig = { ...baseConfig, ...difficultyProfiles[currentDifficulty] };
   if (difficultyEl) difficultyEl.value = mode;
+  applyStrikeZoneAndPciConfig();
 }
 
 const fixedDt = 1 / 90;
@@ -129,7 +130,7 @@ const camera = new THREE.PerspectiveCamera(
   420
 );
 camera.position.set(0, 1.72, 1.35);
-camera.lookAt(0, 1.25, -9.2);
+camera.lookAt(0, 1.2, -8.8);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -429,66 +430,82 @@ addSimplePlayer(0, -BASE_PATH * 2.55, Math.PI, 0xdfe6f4, 0x4a5b73); // CF
 // ------------------------------------------------------------
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
+const STRIKE_ZONE_CENTER_Y = 1.14;
+
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.12, 0.28),
+  center: new THREE.Vector3(),
   width: activeConfig.strikeZoneWidth,
   height: activeConfig.strikeZoneHeight,
   depth: activeConfig.strikeZoneDepth
 };
 
-const zoneGeo = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
 const zoneFill = new THREE.Mesh(
-  zoneGeo,
-  new THREE.MeshBasicMaterial({ color: 0x67bcff, transparent: true, opacity: 0.14 })
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshBasicMaterial({ color: 0x67bcff, transparent: true, opacity: 0.13, depthWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
 );
-zoneFill.position.copy(strikeZone.center);
+zoneFill.renderOrder = 14;
 scene.add(zoneFill);
 
 const zoneEdges = new THREE.LineSegments(
-  new THREE.EdgesGeometry(zoneGeo),
-  new THREE.LineBasicMaterial({ color: 0xe7f6ff })
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+  new THREE.LineBasicMaterial({ color: 0xeef8ff, depthTest: false, transparent: true, opacity: 0.96 })
 );
-zoneEdges.position.copy(strikeZone.center);
+zoneEdges.renderOrder = 20;
 scene.add(zoneEdges);
 
 const pciGroup = new THREE.Group();
 const wedgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 });
-
-const outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.7, activeConfig.pciRadius * 2.45, 28, 1, Math.PI * 0.63, Math.PI * 0.86), wedgeMat.clone());
-const outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.7, activeConfig.pciRadius * 2.45, 28, 1, Math.PI * 1.51, Math.PI * 0.86), wedgeMat.clone());
-const innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.6, activeConfig.pciRadius * 1.34, 24, 1, Math.PI * 0.73, Math.PI * 0.62), wedgeMat.clone());
-const innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.6, activeConfig.pciRadius * 1.34, 24, 1, Math.PI * 1.79, Math.PI * 0.62), wedgeMat.clone());
-
-const pciDot = new THREE.Mesh(
-  new THREE.BoxGeometry(0.065, 0.065, 0.002),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-);
-pciDot.rotation.z = Math.PI / 4;
-
-const pciDot2 = new THREE.Mesh(
-  new THREE.BoxGeometry(0.045, 0.045, 0.002),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-);
-pciDot2.rotation.z = Math.PI / 4;
-pciDot2.position.y = -0.115;
-
-const pciDot3 = new THREE.Mesh(
-  new THREE.BoxGeometry(0.026, 0.026, 0.002),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-);
-pciDot3.rotation.z = Math.PI / 4;
-pciDot3.position.y = -0.195;
-
-pciGroup.add(outerLeft, outerRight, innerLeft, innerRight, pciDot, pciDot2, pciDot3);
+let outerLeft;
+let outerRight;
+let innerLeft;
+let innerRight;
+let pciDot;
+let pciDot2;
+let pciDot3;
 scene.add(pciGroup);
 
-const pciPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(strikeZone.center.z + strikeZone.depth * 0.55));
+const pciPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.0);
 const raycaster = new THREE.Raycaster();
 const mouseNdc = new THREE.Vector2(0, 0);
 const rayHit = new THREE.Vector3();
 
 let pciOffsetX = 0;
 let pciOffsetY = 0;
+
+function rebuildPciGeometry() {
+  for (const m of [outerLeft, outerRight, innerLeft, innerRight, pciDot, pciDot2, pciDot3]) {
+    if (!m) continue;
+    pciGroup.remove(m);
+    m.geometry.dispose();
+  }
+
+  outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 3.2, activeConfig.pciRadius * 2.86, 30, 1, Math.PI * 0.61, Math.PI * 0.9), wedgeMat.clone());
+  outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 3.2, activeConfig.pciRadius * 2.86, 30, 1, Math.PI * 1.49, Math.PI * 0.9), wedgeMat.clone());
+  innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.65, activeConfig.pciRadius * 1.38, 24, 1, Math.PI * 0.73, Math.PI * 0.62), wedgeMat.clone());
+  innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.65, activeConfig.pciRadius * 1.38, 24, 1, Math.PI * 1.79, Math.PI * 0.62), wedgeMat.clone());
+
+  pciDot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.068, 0.068, 0.002),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+  );
+  pciDot.rotation.z = Math.PI / 4;
+
+  pciDot2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.046, 0.046, 0.002),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+  );
+  pciDot2.rotation.z = Math.PI / 4;
+  pciDot2.position.y = -0.12;
+
+  pciDot3 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.028, 0.028, 0.002),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+  );
+  pciDot3.rotation.z = Math.PI / 4;
+  pciDot3.position.y = -0.205;
+
+  pciGroup.add(outerLeft, outerRight, innerLeft, innerRight, pciDot, pciDot2, pciDot3);
+}
 
 function updatePciTransform() {
   pciGroup.position.set(
@@ -498,7 +515,34 @@ function updatePciTransform() {
   );
   pciGroup.lookAt(camera.position);
 }
-updatePciTransform();
+
+function applyStrikeZoneAndPciConfig() {
+  strikeZone.width = activeConfig.strikeZoneWidth;
+  strikeZone.height = activeConfig.strikeZoneHeight;
+  strikeZone.depth = activeConfig.strikeZoneDepth;
+
+  strikeZone.center.set(0, STRIKE_ZONE_CENTER_Y, camera.position.z - activeConfig.strikeZoneDistance);
+
+  zoneFill.geometry.dispose();
+  zoneFill.geometry = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
+  zoneFill.position.copy(strikeZone.center);
+
+  zoneEdges.geometry.dispose();
+  zoneEdges.geometry = new THREE.EdgesGeometry(zoneFill.geometry);
+  zoneEdges.position.copy(strikeZone.center);
+
+  pciPlane.constant = -(strikeZone.center.z + strikeZone.depth * 0.55);
+
+  rebuildPciGeometry();
+
+  const halfW = strikeZone.width * 0.5;
+  const halfH = strikeZone.height * 0.5;
+  pciOffsetX = THREE.MathUtils.clamp(pciOffsetX, -halfW, halfW);
+  pciOffsetY = THREE.MathUtils.clamp(pciOffsetY, -halfH, halfH);
+  updatePciTransform();
+}
+
+applyStrikeZoneAndPciConfig();
 
 // ------------------------------------------------------------
 // FIRST-PERSON BAT + SWING ANIMATION
@@ -1205,4 +1249,5 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  applyStrikeZoneAndPciConfig();
 });
