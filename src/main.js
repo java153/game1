@@ -4,38 +4,54 @@ import * as CANNON from 'cannon-es';
 // ------------------------------------------------------------
 // TUNING VARIABLES
 // ------------------------------------------------------------
-// strikeZoneDistance/width/height/depth: close, immersive strike zone volume.
-// pciSensitivity/pciRadius: PCI movement feel + reticle size.
-// swingDurationMs/swingCooldownMs/swingWindowZ: swing animation timing + valid contact zone.
-// pitchSpeedMin/Max + breakX/breakY: pitch type variation envelope.
-// hit thresholds + impulse values: quality tiers and output ball speed.
+// Camera/zone tuning
+// - cameraFov: smaller value zooms out less distortion while still wide enough to see around zone.
+// - strikeZoneDistance/width/height/depth: first-person strike zone volume in front of camera.
+// PCI tuning
+// - pciSensitivity: mouse-to-PCI speed.
+// - pciRadius: visual size of PCI ring.
+// Swing tuning
+// - swingDurationMs: full animation length.
+// - swingCooldownMs: anti-spam delay between swings.
+// - contactWindowStart/End: normalized swing phase where contact can occur.
+// Hit tuning
+// - swingWindowZ / hitPlaneTolerance: timing leniency around strike zone plane.
+// - perfect/good thresholds: easier quality windows for alignment + bat proximity.
+// - impulse values: output power for weak/good/perfect contact.
 const config = {
-  strikeZoneDistance: 0.78,
-  strikeZoneWidth: 1.25,
-  strikeZoneHeight: 1.55,
+  cameraFov: 62,
+
+  strikeZoneDistance: 1.05,
+  strikeZoneWidth: 1.12,
+  strikeZoneHeight: 1.38,
   strikeZoneDepth: 0.12,
 
-  pciSensitivity: 0.0019,
-  pciRadius: 0.13,
+  pciSensitivity: 0.0018,
+  pciRadius: 0.12,
 
-  swingDurationMs: 190,
-  swingCooldownMs: 380,
-  swingWindowZ: 0.38,
+  swingDurationMs: 240,
+  swingCooldownMs: 340,
+  contactWindowStart: 0.26,
+  contactWindowEnd: 0.72,
 
-  pitchIntervalMs: 1200,
-  pitchSpeedMin: 27,
-  pitchSpeedMax: 34,
-  breakX: 1.9,
-  breakY: 1.3,
+  pitchIntervalMs: 1100,
+  pitchSpeedMin: 25,
+  pitchSpeedMax: 32,
+  breakX: 1.7,
+  breakY: 1.1,
 
-  hitPlaneTolerance: 0.42,
-  perfectPciDist: 0.19,
-  goodPciDist: 0.37,
-  perfectTiming: 0.11,
-  goodTiming: 0.23,
-  weakImpulse: 2.9,
-  goodImpulse: 4.9,
-  perfectImpulse: 6.7,
+  swingWindowZ: 0.68,
+  hitPlaneTolerance: 0.5,
+  perfectPciDist: 0.22,
+  goodPciDist: 0.45,
+  perfectBatDist: 0.23,
+  goodBatDist: 0.42,
+  perfectTiming: 0.15,
+  goodTiming: 0.32,
+
+  weakImpulse: 3.1,
+  goodImpulse: 5.2,
+  perfectImpulse: 7.1,
 
   restitution: 0.5,
   friction: 0.33
@@ -50,9 +66,14 @@ const maxSubSteps = 5;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87a9cf);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 350);
-camera.position.set(0, 1.62, 1.18);
-camera.lookAt(0, 1.35, -2.0);
+const camera = new THREE.PerspectiveCamera(
+  config.cameraFov,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  350
+);
+camera.position.set(0, 1.62, 1.58);
+camera.lookAt(0, 1.34, -1.9);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -122,10 +143,10 @@ for (let row = 0; row < 6; row++) {
 }
 
 // ------------------------------------------------------------
-// STRIKE ZONE + PCI (LARGE/CLOSE)
+// STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.35, camera.position.z - config.strikeZoneDistance),
+  center: new THREE.Vector3(0, 1.34, camera.position.z - config.strikeZoneDistance),
   width: config.strikeZoneWidth,
   height: config.strikeZoneHeight,
   depth: config.strikeZoneDepth
@@ -133,7 +154,7 @@ const strikeZone = {
 
 const zoneFill = new THREE.Mesh(
   new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth),
-  new THREE.MeshBasicMaterial({ color: 0x66bbff, transparent: true, opacity: 0.16 })
+  new THREE.MeshBasicMaterial({ color: 0x66bbff, transparent: true, opacity: 0.14 })
 );
 zoneFill.position.copy(strikeZone.center);
 scene.add(zoneFill);
@@ -151,7 +172,7 @@ const pciRing = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
 );
 const pciDot = new THREE.Mesh(
-  new THREE.CircleGeometry(0.025, 20),
+  new THREE.CircleGeometry(0.024, 20),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
 );
 pciGroup.add(pciRing, pciDot);
@@ -171,59 +192,90 @@ function updatePciTransform() {
 updatePciTransform();
 
 // ------------------------------------------------------------
-// FIRST-PERSON BAT (VISIBLE + SWING ANIMATION)
+// FIRST-PERSON BAT + SWING ANIMATION
 // ------------------------------------------------------------
 const batPivot = new THREE.Group();
-const batIdlePos = new THREE.Vector3(0.44, -0.28, -0.58);
-const batIdleRot = new THREE.Euler(-0.45, -0.9, 0.8);
-const batSwingRot = new THREE.Euler(0.1, 1.0, -0.65);
-
 camera.add(batPivot);
+
+const batIdlePos = new THREE.Vector3(0.55, -0.29, -0.72);
+const batIdleRot = new THREE.Euler(-0.42, -1.04, 0.88);
+const batContactRot = new THREE.Euler(-0.02, 0.56, -0.52);
+const batFollowRot = new THREE.Euler(0.16, 1.08, -0.84);
+
 batPivot.position.copy(batIdlePos);
 batPivot.rotation.copy(batIdleRot);
 
 const batMesh = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.04, 0.06, 1.35, 18),
+  new THREE.CylinderGeometry(0.038, 0.058, 1.38, 18),
   new THREE.MeshStandardMaterial({ color: 0xc99660, roughness: 0.45, metalness: 0.02 })
 );
 batMesh.rotation.z = Math.PI / 2;
-batMesh.position.set(0.52, -0.05, -0.1);
+batMesh.position.set(0.55, -0.05, -0.12);
 batPivot.add(batMesh);
+
+const batCap = new THREE.Mesh(
+  new THREE.SphereGeometry(0.055, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0xa97745, roughness: 0.5 })
+);
+batCap.position.set(-0.12, -0.05, -0.12);
+batPivot.add(batCap);
 
 let isSwinging = false;
 let swingStartMs = 0;
-let swingForwardDone = false;
 let nextSwingAllowedMs = 0;
 let swingUsedThisPitch = false;
+let swingContactResolved = false;
+let swingMissQueued = false;
 
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
 }
 
 function updateBatSwing(nowMs) {
   if (!isSwinging) return;
 
-  const elapsed = nowMs - swingStartMs;
-  const half = config.swingDurationMs * 0.55;
+  const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / config.swingDurationMs, 0, 1);
 
-  if (elapsed <= half) {
-    const t = easeOutCubic(elapsed / half);
-    batPivot.rotation.x = THREE.MathUtils.lerp(batIdleRot.x, batSwingRot.x, t);
-    batPivot.rotation.y = THREE.MathUtils.lerp(batIdleRot.y, batSwingRot.y, t);
-    batPivot.rotation.z = THREE.MathUtils.lerp(batIdleRot.z, batSwingRot.z, t);
-  } else if (elapsed <= config.swingDurationMs) {
-    if (!swingForwardDone) {
-      swingForwardDone = true;
-      evaluateSwing();
-    }
-    const t = (elapsed - half) / (config.swingDurationMs - half);
-    batPivot.rotation.x = THREE.MathUtils.lerp(batSwingRot.x, batIdleRot.x, t);
-    batPivot.rotation.y = THREE.MathUtils.lerp(batSwingRot.y, batIdleRot.y, t);
-    batPivot.rotation.z = THREE.MathUtils.lerp(batSwingRot.z, batIdleRot.z, t);
+  // 3-stage arc: load->contact->follow-through->recover
+  if (t < 0.46) {
+    const a = smoothstep(t / 0.46);
+    batPivot.rotation.x = THREE.MathUtils.lerp(batIdleRot.x, batContactRot.x, a);
+    batPivot.rotation.y = THREE.MathUtils.lerp(batIdleRot.y, batContactRot.y, a);
+    batPivot.rotation.z = THREE.MathUtils.lerp(batIdleRot.z, batContactRot.z, a);
+    batPivot.position.lerpVectors(batIdlePos, new THREE.Vector3(0.53, -0.28, -0.68), a);
+  } else if (t < 0.78) {
+    const a = smoothstep((t - 0.46) / 0.32);
+    batPivot.rotation.x = THREE.MathUtils.lerp(batContactRot.x, batFollowRot.x, a);
+    batPivot.rotation.y = THREE.MathUtils.lerp(batContactRot.y, batFollowRot.y, a);
+    batPivot.rotation.z = THREE.MathUtils.lerp(batContactRot.z, batFollowRot.z, a);
+    batPivot.position.lerpVectors(new THREE.Vector3(0.53, -0.28, -0.68), new THREE.Vector3(0.5, -0.24, -0.64), a);
   } else {
-    batPivot.rotation.copy(batIdleRot);
-    isSwinging = false;
+    const a = smoothstep((t - 0.78) / 0.22);
+    batPivot.rotation.x = THREE.MathUtils.lerp(batFollowRot.x, batIdleRot.x, a);
+    batPivot.rotation.y = THREE.MathUtils.lerp(batFollowRot.y, batIdleRot.y, a);
+    batPivot.rotation.z = THREE.MathUtils.lerp(batFollowRot.z, batIdleRot.z, a);
+    batPivot.position.lerpVectors(new THREE.Vector3(0.5, -0.24, -0.64), batIdlePos, a);
   }
+
+  const inContactPhase = t >= config.contactWindowStart && t <= config.contactWindowEnd;
+  if (inContactPhase && !swingContactResolved) {
+    tryResolveContact();
+  }
+
+  if (t >= 1) {
+    isSwinging = false;
+    batPivot.rotation.copy(batIdleRot);
+    batPivot.position.copy(batIdlePos);
+    if (!swingContactResolved && swingMissQueued) {
+      showResult('MISS');
+    }
+  }
+}
+
+function getBatSweetSpotWorld() {
+  // near barrel end in bat local space
+  const p = new THREE.Vector3(1.15, -0.04, -0.12);
+  return batPivot.localToWorld(p);
 }
 
 // ------------------------------------------------------------
@@ -265,10 +317,9 @@ const ballMesh = new THREE.Mesh(
 scene.add(ballMesh);
 
 // ------------------------------------------------------------
-// AUDIO (procedural, no external assets needed)
+// AUDIO (procedural)
 // ------------------------------------------------------------
 let audioCtx = null;
-let audioReady = false;
 
 function ensureAudioContext() {
   if (!audioCtx) {
@@ -277,7 +328,6 @@ function ensureAudioContext() {
     audioCtx = new Ctx();
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  audioReady = true;
   return audioCtx;
 }
 
@@ -370,22 +420,21 @@ function showResult(text, mph = null) {
   hudTimer = setTimeout(() => {
     statusEl.textContent = 'TRACK THE BALL';
     detailsEl.textContent = '';
-  }, 850);
+  }, 900);
 }
 
 // ------------------------------------------------------------
-// PITCHING SYSTEM
+// PITCHING
 // ------------------------------------------------------------
 const spawnPos = new CANNON.Vec3(0, 1.5, -17.5);
 let pitchTimer = null;
 let ballWasHit = false;
 
 function randomPitchVelocity() {
-  // Choose pitch profile: fastball / slight curve / slight drop
   const r = Math.random();
   const pitchType = r < 0.45 ? 'FASTBALL' : r < 0.75 ? 'CURVE' : 'DROP';
 
-  const tx = (Math.random() - 0.5) * strikeZone.width * 0.82;
+  const tx = (Math.random() - 0.5) * strikeZone.width * 0.85;
   const ty = strikeZone.center.y + (Math.random() - 0.5) * strikeZone.height * 0.82;
   const tz = strikeZone.center.z;
 
@@ -396,9 +445,9 @@ function randomPitchVelocity() {
   let breakY = (Math.random() - 0.5) * config.breakY;
 
   if (pitchType === 'FASTBALL') {
-    speed += 1.5;
+    speed += 1.6;
     breakX *= 0.35;
-    breakY *= 0.4;
+    breakY *= 0.35;
   } else if (pitchType === 'CURVE') {
     breakX *= 1.2;
     breakY *= 0.55;
@@ -420,6 +469,8 @@ function resetAndPitch(delay = config.pitchIntervalMs) {
 
   swingUsedThisPitch = false;
   ballWasHit = false;
+  swingContactResolved = false;
+  swingMissQueued = false;
 
   pitchTimer = setTimeout(() => {
     ballBody.velocity.copy(randomPitchVelocity());
@@ -430,7 +481,7 @@ function resetAndPitch(delay = config.pitchIntervalMs) {
 resetAndPitch(550);
 
 // ------------------------------------------------------------
-// INPUT: PCI movement + Z swing
+// INPUT
 // ------------------------------------------------------------
 window.addEventListener('mousemove', (e) => {
   pciOffsetX += e.movementX * config.pciSensitivity;
@@ -457,19 +508,20 @@ window.addEventListener('keydown', (e) => {
   if (key !== 'z') return;
 
   const now = performance.now();
-  ensureAudioContext(); // user gesture unlock
+  ensureAudioContext(); // unlock audio on user gesture
 
   if (now < nextSwingAllowedMs || isSwinging || swingUsedThisPitch) return;
 
   isSwinging = true;
   swingStartMs = now;
-  swingForwardDone = false;
-  swingUsedThisPitch = true;
   nextSwingAllowedMs = now + config.swingCooldownMs;
+  swingUsedThisPitch = true;
+  swingContactResolved = false;
+  swingMissQueued = true;
 });
 
 // ------------------------------------------------------------
-// HIT DETECTION (PCI + TIMING + BAT SWING WINDOW)
+// HIT DETECTION
 // ------------------------------------------------------------
 function pciBallDistance() {
   const dx = ballBody.position.x - (strikeZone.center.x + pciOffsetX);
@@ -477,31 +529,39 @@ function pciBallDistance() {
   return Math.hypot(dx, dy);
 }
 
-function classifyContact(pciDist, timingDist) {
-  if (pciDist <= config.perfectPciDist && timingDist <= config.perfectTiming) return 'PERFECT';
-  if (pciDist <= config.goodPciDist && timingDist <= config.goodTiming) return 'GOOD';
+function classifyContact(pciDist, timingDist, batDist) {
+  const perfect =
+    pciDist <= config.perfectPciDist &&
+    timingDist <= config.perfectTiming &&
+    batDist <= config.perfectBatDist;
+  if (perfect) return 'PERFECT';
+
+  const good =
+    pciDist <= config.goodPciDist &&
+    timingDist <= config.goodTiming &&
+    batDist <= config.goodBatDist;
+  if (good) return 'GOOD';
+
   return 'WEAK';
 }
 
-function evaluateSwing() {
-  const zDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  const inSwingWindow = zDist <= config.swingWindowZ;
-
-  if (!inSwingWindow || ballBody.position.z > strikeZone.center.z + 0.28) {
-    showResult('MISS');
+function tryResolveContact() {
+  const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
+  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.35) {
     return;
   }
 
   const pciDist = pciBallDistance();
-  const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
+  if (pciDist > config.goodPciDist * 1.65) return;
 
-  // Require at least moderate PCI alignment for contact.
-  if (pciDist > config.goodPciDist * 1.35) {
-    showResult('MISS');
-    return;
-  }
+  const sweetSpot = getBatSweetSpotWorld();
+  const batDist = sweetSpot.distanceTo(ballMesh.position);
+  if (batDist > config.goodBatDist * 1.5) return;
 
-  const quality = classifyContact(pciDist, timingDist);
+  swingContactResolved = true;
+  swingMissQueued = false;
+
+  const quality = classifyContact(pciDist, timingDist, batDist);
 
   const xInfluence = THREE.MathUtils.clamp(pciOffsetX / (strikeZone.width * 0.5), -1, 1);
   const yInfluence = THREE.MathUtils.clamp(pciOffsetY / (strikeZone.height * 0.5), -1, 1);
@@ -512,12 +572,12 @@ function evaluateSwing() {
   if (quality === 'PERFECT') impulseMag = config.perfectImpulse;
 
   const hitDir = new CANNON.Vec3(
-    xInfluence * 0.85,
-    0.78 + yInfluence * 0.62 + timingScale * 0.18,
+    xInfluence * 0.78,
+    0.78 + yInfluence * 0.58 + timingScale * 0.2,
     1.04 - Math.abs(xInfluence) * 0.16
   );
   hitDir.normalize();
-  hitDir.scale(impulseMag * (0.77 + timingScale * 0.35), hitDir);
+  hitDir.scale(impulseMag * (0.78 + timingScale * 0.35), hitDir);
 
   const preSpeed = ballBody.velocity.length();
   if (preSpeed > 42) ballBody.velocity.scale(42 / preSpeed, ballBody.velocity);
@@ -531,7 +591,7 @@ function evaluateSwing() {
 }
 
 function maybeAutoMiss() {
-  if (!swingUsedThisPitch && !ballWasHit && ballBody.position.z > strikeZone.center.z + 0.26) {
+  if (!swingUsedThisPitch && !ballWasHit && ballBody.position.z > strikeZone.center.z + 0.28) {
     swingUsedThisPitch = true;
     showResult('MISS');
   }
