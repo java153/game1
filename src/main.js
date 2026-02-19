@@ -14,27 +14,27 @@ const baseConfig = {
 
   pciRadius: 0.13,
 
-  swingDurationMs: 220,
-  swingCooldownMs: 420,
+  swingDurationMs: 260,
+  swingCooldownMs: 520,
   contactWindowStart: 0.16,
   contactWindowEnd: 0.84,
 
-  postSwingDelayMinMs: 1700,
-  postSwingDelayMaxMs: 2600,
+  postSwingDelayMinMs: 2100,
+  postSwingDelayMaxMs: 3200,
 
-  pitchSpeedMin: 24,
-  pitchSpeedMax: 32,
-  breakX: 1.8,
-  breakY: 1.2,
+  pitchSpeedMin: 18,
+  pitchSpeedMax: 24,
+  breakX: 1.2,
+  breakY: 0.8,
 
-  swingWindowZ: 1.08,
-  hitPlaneTolerance: 0.82,
-  perfectPciDist: 0.4,
-  goodPciDist: 0.74,
-  perfectBatDist: 0.38,
-  goodBatDist: 0.72,
-  perfectTiming: 0.28,
-  goodTiming: 0.58,
+  swingWindowZ: 1.22,
+  hitPlaneTolerance: 0.98,
+  perfectPciDist: 0.52,
+  goodPciDist: 0.94,
+  perfectBatDist: 0.5,
+  goodBatDist: 0.92,
+  perfectTiming: 0.4,
+  goodTiming: 0.8,
 
   weakImpulse: 3.6,
   goodImpulse: 6.0,
@@ -47,42 +47,60 @@ const baseConfig = {
 const difficultyProfiles = {
   easy: {
     name: 'EASY',
-    pitchSpeedMin: 14,
-    pitchSpeedMax: 19,
-    breakX: 0.8,
-    breakY: 0.45,
-    swingDurationMs: 265,
+    pitchSpeedMin: 11,
+    pitchSpeedMax: 15,
+    breakX: 0.45,
+    breakY: 0.25,
+    swingDurationMs: 320,
+    swingCooldownMs: 640,
+    postSwingDelayMinMs: 2600,
+    postSwingDelayMaxMs: 3600,
+    swingWindowZ: 1.55,
+    hitPlaneTolerance: 1.2,
+    perfectPciDist: 0.68,
+    goodPciDist: 1.05,
+    perfectBatDist: 0.62,
+    goodBatDist: 1.12,
+    perfectTiming: 0.56,
+    goodTiming: 0.98
+  },
+  normal: {
+    name: 'NORMAL',
+    pitchSpeedMin: 16,
+    pitchSpeedMax: 21,
+    breakX: 0.9,
+    breakY: 0.6,
+    swingDurationMs: 285,
     swingCooldownMs: 560,
     postSwingDelayMinMs: 2300,
-    postSwingDelayMaxMs: 3000,
-    swingWindowZ: 1.35,
-    hitPlaneTolerance: 1.06,
-    perfectPciDist: 0.56,
-    goodPciDist: 0.95,
-    perfectBatDist: 0.52,
-    goodBatDist: 1.0,
-    perfectTiming: 0.42,
-    goodTiming: 0.82
+    postSwingDelayMaxMs: 3300,
+    swingWindowZ: 1.38,
+    hitPlaneTolerance: 1.08,
+    perfectPciDist: 0.6,
+    goodPciDist: 0.98,
+    perfectBatDist: 0.56,
+    goodBatDist: 1.02,
+    perfectTiming: 0.48,
+    goodTiming: 0.9
   },
-  normal: { name: 'NORMAL' },
   hard: {
     name: 'HARD',
-    pitchSpeedMin: 31,
-    pitchSpeedMax: 39,
-    breakX: 2.4,
-    breakY: 1.6,
-    swingDurationMs: 185,
-    swingCooldownMs: 320,
-    postSwingDelayMinMs: 1200,
-    postSwingDelayMaxMs: 1800,
-    swingWindowZ: 0.8,
-    hitPlaneTolerance: 0.56,
-    perfectPciDist: 0.24,
-    goodPciDist: 0.52,
-    perfectBatDist: 0.24,
-    goodBatDist: 0.52,
-    perfectTiming: 0.16,
-    goodTiming: 0.34
+    pitchSpeedMin: 19,
+    pitchSpeedMax: 25,
+    breakX: 1.2,
+    breakY: 0.85,
+    swingDurationMs: 245,
+    swingCooldownMs: 470,
+    postSwingDelayMinMs: 1800,
+    postSwingDelayMaxMs: 2600,
+    swingWindowZ: 1.12,
+    hitPlaneTolerance: 0.9,
+    perfectPciDist: 0.46,
+    goodPciDist: 0.82,
+    perfectBatDist: 0.43,
+    goodBatDist: 0.8,
+    perfectTiming: 0.35,
+    goodTiming: 0.66
   }
 };
 
@@ -96,8 +114,8 @@ function setDifficulty(mode) {
   if (difficultyEl) difficultyEl.value = mode;
 }
 
-const fixedDt = 1 / 120;
-const maxSubSteps = 5;
+const fixedDt = 1 / 90;
+const maxSubSteps = 4;
 
 // ------------------------------------------------------------
 // SCENE / CAMERA
@@ -114,8 +132,8 @@ camera.position.set(0, 1.8, 3.75);
 camera.lookAt(0, 1.14, -1.72);
 scene.add(camera);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 renderer.domElement.style.cursor = 'none';
@@ -170,6 +188,16 @@ const field = new THREE.Mesh(
 );
 field.rotation.x = -Math.PI / 2;
 scene.add(field);
+
+for (let i = 0; i < 12; i++) {
+  const stripe = new THREE.Mesh(
+    new THREE.PlaneGeometry(240, 10),
+    new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0x2a8240 : 0x328f49, roughness: 0.96, transparent: true, opacity: 0.45 })
+  );
+  stripe.rotation.x = -Math.PI / 2;
+  stripe.position.set(0, 0.012, -115 + i * 20);
+  scene.add(stripe);
+}
 
 // Infield dirt around home and base paths (diamond feel)
 const infieldCircle = new THREE.Mesh(
@@ -285,22 +313,34 @@ const seatMats = [
   new THREE.MeshStandardMaterial({ color: 0x5f7f6c, roughness: 0.84 }),
   new THREE.MeshStandardMaterial({ color: 0x7c6a56, roughness: 0.84 })
 ];
+const seatGeo = new THREE.BoxGeometry(1.9, 0.56, 1.25);
+
 for (let tier = 0; tier < 4; tier++) {
-  for (let row = 0; row < 6; row++) {
+  const rows = 6;
+  const stepsPerRing = 40 + tier * 6;
+  const total = rows * stepsPerRing;
+  const seatInstances = new THREE.InstancedMesh(seatGeo, seatMats[tier % seatMats.length], total);
+  const m = new THREE.Matrix4();
+  let idx = 0;
+
+  for (let row = 0; row < rows; row++) {
     const radius = 18 + tier * 11 + row * 2.0;
     const y = 1.0 + tier * 2.0 + row * 0.6;
-    const steps = 64 + tier * 6 + row * 2;
-    for (let i = 0; i < steps; i++) {
-      const t = i / (steps - 1);
+    for (let i = 0; i < stepsPerRing; i++) {
+      const t = i / (stepsPerRing - 1);
       const a = THREE.MathUtils.lerp(0, Math.PI * 2, t);
       const x = Math.cos(a) * radius;
       const z = Math.sin(a) * radius - 10;
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.56, 1.25), seatMats[(tier + row) % seatMats.length]);
-      seat.position.set(x, y, z);
-      seat.lookAt(0, y, -6);
-      scene.add(seat);
+      m.compose(
+        new THREE.Vector3(x, y, z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -a + Math.PI * 0.5, 0)),
+        new THREE.Vector3(1, 1, 1)
+      );
+      seatInstances.setMatrixAt(idx++, m);
     }
   }
+  seatInstances.instanceMatrix.needsUpdate = true;
+  scene.add(seatInstances);
 }
 
 function addLightTower(x, z) {
@@ -410,28 +450,25 @@ zoneEdges.position.copy(strikeZone.center);
 scene.add(zoneEdges);
 
 const pciGroup = new THREE.Group();
-const pciWedge = new THREE.Mesh(
-  new THREE.TorusGeometry(activeConfig.pciRadius * 1.42, activeConfig.pciRadius * 0.3, 18, 40, Math.PI * 1.35),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
-);
-pciWedge.rotation.z = Math.PI * 0.82;
+const wedgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 });
 
-const wedgeCapLeft = new THREE.Mesh(
-  new THREE.CircleGeometry(activeConfig.pciRadius * 0.26, 16),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
-);
-const wedgeCapRight = wedgeCapLeft.clone();
-const capR = activeConfig.pciRadius * 1.42;
-const capA0 = Math.PI * 0.82;
-const capA1 = capA0 + Math.PI * 1.35;
-wedgeCapLeft.position.set(Math.cos(capA0) * capR, Math.sin(capA0) * capR, 0);
-wedgeCapRight.position.set(Math.cos(capA1) * capR, Math.sin(capA1) * capR, 0);
+const outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.05, activeConfig.pciRadius * 1.78, 24, 1, Math.PI * 0.66, Math.PI * 0.74), wedgeMat.clone());
+const outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.05, activeConfig.pciRadius * 1.78, 24, 1, Math.PI * 1.6, Math.PI * 0.74), wedgeMat.clone());
+const innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.15, activeConfig.pciRadius * 0.95, 24, 1, Math.PI * 0.7, Math.PI * 0.6), wedgeMat.clone());
+const innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.15, activeConfig.pciRadius * 0.95, 24, 1, Math.PI * 1.7, Math.PI * 0.6), wedgeMat.clone());
 
 const pciDot = new THREE.Mesh(
-  new THREE.CircleGeometry(0.04, 20),
+  new THREE.CircleGeometry(0.036, 20),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
 );
-pciGroup.add(pciWedge, wedgeCapLeft, wedgeCapRight, pciDot);
+
+const pciDot2 = new THREE.Mesh(
+  new THREE.CircleGeometry(0.022, 20),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+);
+pciDot2.position.y = -0.1;
+
+pciGroup.add(outerLeft, outerRight, innerLeft, innerRight, pciDot, pciDot2);
 scene.add(pciGroup);
 
 const pciPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(strikeZone.center.z + strikeZone.depth * 0.55));
@@ -564,7 +601,7 @@ function getBatSweetSpotWorld() {
 // ------------------------------------------------------------
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
-world.solver.iterations = 14;
+world.solver.iterations = 10;
 world.solver.tolerance = 1e-4;
 
 const ballMaterial = new CANNON.Material('ball');
@@ -899,8 +936,6 @@ scheduleNextPitch();
 // INPUT (PCI ATTACHED TO CURSOR)
 // ------------------------------------------------------------
 window.addEventListener('mousemove', (e) => {
-  ensureAudioContext();
-  startMusic();
 
   mouseNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouseNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -1088,10 +1123,12 @@ function updatePciColor() {
   let color = 0xffffff;
   if (d <= activeConfig.goodPciDist) color = 0xffe066;
   if (d <= activeConfig.perfectPciDist) color = 0x60ff75;
-  pciWedge.material.color.setHex(color);
-  wedgeCapLeft.material.color.setHex(color);
-  wedgeCapRight.material.color.setHex(color);
+  outerLeft.material.color.setHex(color);
+  outerRight.material.color.setHex(color);
+  innerLeft.material.color.setHex(color);
+  innerRight.material.color.setHex(color);
   pciDot.material.color.setHex(color);
+  pciDot2.material.color.setHex(color);
 }
 
 // ------------------------------------------------------------
@@ -1137,5 +1174,5 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 });
