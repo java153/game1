@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Baseball Hit Sim</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <!-- Fallback import map for root-source hosting; Vite build/dev still works -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="title">PCI Hitting Sim</div>
+      <div><strong>Mouse:</strong> PCI follows your cursor position directly</div>
+      <div><strong>SPACE:</strong> swing bat &nbsp; <strong>R:</strong> reset pitch</div>
+      <label class="difficulty-row">Difficulty:
+        <select id="difficulty">
+          <option value="easy" selected>Easy</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <div id="status">TRACK THE BALL</div>
+      <div id="details"></div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
