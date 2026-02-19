@@ -5,41 +5,40 @@ import * as CANNON from 'cannon-es';
 // TUNING VARIABLES
 // ------------------------------------------------------------
 const baseConfig = {
-  cameraFov: 82,
+  cameraFov: 88,
 
-  strikeZoneDistance: 1.2,
-  strikeZoneWidth: 1.24,
-  strikeZoneHeight: 1.7,
-  strikeZoneDepth: 0.16,
+  strikeZoneDistance: 1.25,
+  strikeZoneWidth: 1.3,
+  strikeZoneHeight: 1.78,
+  strikeZoneDepth: 0.18,
 
-  pciSensitivity: 0.0018,
   pciRadius: 0.13,
 
-  swingDurationMs: 200,
-  swingCooldownMs: 380,
-  contactWindowStart: 0.18,
-  contactWindowEnd: 0.8,
+  swingDurationMs: 220,
+  swingCooldownMs: 420,
+  contactWindowStart: 0.16,
+  contactWindowEnd: 0.84,
 
-  postSwingDelayMinMs: 1500,
-  postSwingDelayMaxMs: 2500,
+  postSwingDelayMinMs: 1700,
+  postSwingDelayMaxMs: 2600,
 
   pitchSpeedMin: 24,
-  pitchSpeedMax: 31,
+  pitchSpeedMax: 32,
   breakX: 1.8,
-  breakY: 1.25,
+  breakY: 1.2,
 
-  swingWindowZ: 1.05,
-  hitPlaneTolerance: 0.78,
-  perfectPciDist: 0.38,
-  goodPciDist: 0.72,
-  perfectBatDist: 0.36,
-  goodBatDist: 0.7,
-  perfectTiming: 0.26,
-  goodTiming: 0.56,
+  swingWindowZ: 1.08,
+  hitPlaneTolerance: 0.82,
+  perfectPciDist: 0.4,
+  goodPciDist: 0.74,
+  perfectBatDist: 0.38,
+  goodBatDist: 0.72,
+  perfectTiming: 0.28,
+  goodTiming: 0.58,
 
-  weakImpulse: 3.4,
-  goodImpulse: 5.8,
-  perfectImpulse: 7.5,
+  weakImpulse: 3.6,
+  goodImpulse: 6.0,
+  perfectImpulse: 7.8,
 
   restitution: 0.5,
   friction: 0.33
@@ -48,44 +47,42 @@ const baseConfig = {
 const difficultyProfiles = {
   easy: {
     name: 'EASY',
-    pitchSpeedMin: 15,
-    pitchSpeedMax: 20,
-    breakX: 0.9,
-    breakY: 0.55,
-    swingDurationMs: 245,
-    swingCooldownMs: 520,
-    postSwingDelayMinMs: 2200,
-    postSwingDelayMaxMs: 2800,
-    swingWindowZ: 1.25,
-    hitPlaneTolerance: 1.0,
-    perfectPciDist: 0.5,
-    goodPciDist: 0.88,
-    perfectBatDist: 0.48,
-    goodBatDist: 0.92,
-    perfectTiming: 0.36,
-    goodTiming: 0.76
+    pitchSpeedMin: 14,
+    pitchSpeedMax: 19,
+    breakX: 0.8,
+    breakY: 0.45,
+    swingDurationMs: 265,
+    swingCooldownMs: 560,
+    postSwingDelayMinMs: 2300,
+    postSwingDelayMaxMs: 3000,
+    swingWindowZ: 1.35,
+    hitPlaneTolerance: 1.06,
+    perfectPciDist: 0.56,
+    goodPciDist: 0.95,
+    perfectBatDist: 0.52,
+    goodBatDist: 1.0,
+    perfectTiming: 0.42,
+    goodTiming: 0.82
   },
-  normal: {
-    name: 'NORMAL'
-  },
+  normal: { name: 'NORMAL' },
   hard: {
     name: 'HARD',
-    pitchSpeedMin: 30,
-    pitchSpeedMax: 38,
-    breakX: 2.3,
+    pitchSpeedMin: 31,
+    pitchSpeedMax: 39,
+    breakX: 2.4,
     breakY: 1.6,
-    swingDurationMs: 180,
+    swingDurationMs: 185,
     swingCooldownMs: 320,
     postSwingDelayMinMs: 1200,
     postSwingDelayMaxMs: 1800,
-    swingWindowZ: 0.82,
-    hitPlaneTolerance: 0.58,
+    swingWindowZ: 0.8,
+    hitPlaneTolerance: 0.56,
     perfectPciDist: 0.24,
     goodPciDist: 0.52,
     perfectBatDist: 0.24,
-    goodBatDist: 0.54,
+    goodBatDist: 0.52,
     perfectTiming: 0.16,
-    goodTiming: 0.35
+    goodTiming: 0.34
   }
 };
 
@@ -96,9 +93,7 @@ function setDifficulty(mode) {
   if (!difficultyProfiles[mode]) return;
   currentDifficulty = mode;
   activeConfig = { ...baseConfig, ...difficultyProfiles[currentDifficulty] };
-  if (difficultyEl) {
-    difficultyEl.value = mode;
-  }
+  if (difficultyEl) difficultyEl.value = mode;
 }
 
 const fixedDt = 1 / 120;
@@ -113,31 +108,32 @@ const camera = new THREE.PerspectiveCamera(
   activeConfig.cameraFov,
   window.innerWidth / window.innerHeight,
   0.1,
-  350
+  420
 );
-camera.position.set(0, 1.7, 2.85);
-camera.lookAt(0, 1.28, -1.75);
+camera.position.set(0, 1.78, 3.55);
+camera.lookAt(0, 1.18, -1.7);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+renderer.domElement.style.cursor = 'crosshair';
 
-scene.add(new THREE.HemisphereLight(0xecf4ff, 0x2f4559, 0.95));
-const sun = new THREE.DirectionalLight(0xffffff, 1.05);
-sun.position.set(14, 18, 10);
+scene.add(new THREE.HemisphereLight(0xecf5ff, 0x2d4354, 0.98));
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+sun.position.set(16, 20, 12);
 scene.add(sun);
 
 // Sky gradient dome
-const skyGeo = new THREE.SphereGeometry(260, 32, 20);
+const skyGeo = new THREE.SphereGeometry(300, 36, 22);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
   uniforms: {
-    topColor: { value: new THREE.Color(0x86b7ee) },
-    bottomColor: { value: new THREE.Color(0xe7f2ff) },
+    topColor: { value: new THREE.Color(0x80b5f0) },
+    bottomColor: { value: new THREE.Color(0xf5f9ff) },
     offset: { value: 12.0 },
-    exponent: { value: 0.9 }
+    exponent: { value: 0.85 }
   },
   vertexShader: `
     varying vec3 vWorldPosition;
@@ -163,22 +159,29 @@ const skyMat = new THREE.ShaderMaterial({
 scene.add(new THREE.Mesh(skyGeo, skyMat));
 
 // ------------------------------------------------------------
-// SIMPLE STADIUM ENVIRONMENT
+// STADIUM ENVIRONMENT (FLESHED OUT)
 // ------------------------------------------------------------
 const field = new THREE.Mesh(
-  new THREE.PlaneGeometry(180, 180),
-  new THREE.MeshStandardMaterial({ color: 0x2c8e45, roughness: 0.96 })
+  new THREE.PlaneGeometry(220, 220),
+  new THREE.MeshStandardMaterial({ color: 0x2e8f46, roughness: 0.95 })
 );
 field.rotation.x = -Math.PI / 2;
 scene.add(field);
 
-const dirt = new THREE.Mesh(
-  new THREE.CircleGeometry(5, 48),
-  new THREE.MeshStandardMaterial({ color: 0x8a6d42, roughness: 0.9 })
+const infieldDirt = new THREE.Mesh(
+  new THREE.CircleGeometry(6, 64),
+  new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
 );
-dirt.rotation.x = -Math.PI / 2;
-dirt.position.y = 0.01;
-scene.add(dirt);
+infieldDirt.rotation.x = -Math.PI / 2;
+infieldDirt.position.y = 0.01;
+scene.add(infieldDirt);
+
+const mound = new THREE.Mesh(
+  new THREE.CylinderGeometry(1.4, 1.6, 0.16, 30),
+  new THREE.MeshStandardMaterial({ color: 0x9b7c4f, roughness: 0.85 })
+);
+mound.position.set(0, 0.08, -17.5);
+scene.add(mound);
 
 const plate = new THREE.Mesh(
   new THREE.BoxGeometry(0.62, 0.04, 0.62),
@@ -187,55 +190,170 @@ const plate = new THREE.Mesh(
 plate.position.set(0, 0.02, 0);
 scene.add(plate);
 
+function addBase(x, z) {
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.08, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0xfefefe, roughness: 0.65 })
+  );
+  base.position.set(x, 0.04, z);
+  scene.add(base);
+}
+addBase(6.5, -6.5); // 1st
+addBase(-6.5, -6.5); // 3rd
+addBase(0, -13); // 2nd
+
+const foulLineMat = new THREE.MeshBasicMaterial({ color: 0xf4f4f4 });
+const foulLineA = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 90), foulLineMat);
+foulLineA.position.set(31.9, 0.015, -31.9);
+foulLineA.rotation.y = Math.PI / 4;
+scene.add(foulLineA);
+
+const foulLineB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 90), foulLineMat);
+foulLineB.position.set(-31.9, 0.015, -31.9);
+foulLineB.rotation.y = -Math.PI / 4;
+scene.add(foulLineB);
+
 const backstopWall = new THREE.Mesh(
-  new THREE.BoxGeometry(14, 7, 0.35),
-  new THREE.MeshStandardMaterial({ color: 0x2f3946, roughness: 0.78 })
+  new THREE.BoxGeometry(16, 8, 0.35),
+  new THREE.MeshStandardMaterial({ color: 0x2e3844, roughness: 0.76 })
 );
-backstopWall.position.set(0, 3.5, 3.2);
+backstopWall.position.set(0, 4, 3.7);
 scene.add(backstopWall);
 
 const backstopNet = new THREE.Mesh(
-  new THREE.PlaneGeometry(13, 6.5),
-  new THREE.MeshBasicMaterial({ color: 0xaec4d8, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+  new THREE.PlaneGeometry(15, 7),
+  new THREE.MeshBasicMaterial({ color: 0xb8ccdf, transparent: true, opacity: 0.22, side: THREE.DoubleSide })
 );
-backstopNet.position.set(0, 3.45, 2.99);
+backstopNet.position.set(0, 3.95, 3.5);
 scene.add(backstopNet);
 
 const outfieldWall = new THREE.Mesh(
-  new THREE.CylinderGeometry(45, 45, 3.5, 80, 1, true, Math.PI * 0.08, Math.PI * 0.84),
-  new THREE.MeshStandardMaterial({ color: 0x244561, roughness: 0.82, side: THREE.DoubleSide })
+  new THREE.CylinderGeometry(52, 52, 4.4, 96, 1, true, Math.PI * 0.04, Math.PI * 0.92),
+  new THREE.MeshStandardMaterial({ color: 0x1f4766, roughness: 0.82, side: THREE.DoubleSide })
 );
-outfieldWall.position.set(0, 1.75, -43);
+outfieldWall.position.set(0, 2.2, -48);
 scene.add(outfieldWall);
 
-const seatingMats = [
-  new THREE.MeshStandardMaterial({ color: 0x54657e, roughness: 0.84 }),
-  new THREE.MeshStandardMaterial({ color: 0x6b5d7f, roughness: 0.84 }),
-  new THREE.MeshStandardMaterial({ color: 0x5f7c68, roughness: 0.84 })
+const warningTrack = new THREE.Mesh(
+  new THREE.RingGeometry(46.5, 52, 90, 1, Math.PI * 0.04, Math.PI * 0.92),
+  new THREE.MeshStandardMaterial({ color: 0x8b6e46, roughness: 0.9, side: THREE.DoubleSide })
+);
+warningTrack.rotation.x = -Math.PI / 2;
+warningTrack.position.set(0, 0.011, -48);
+scene.add(warningTrack);
+
+const seatMats = [
+  new THREE.MeshStandardMaterial({ color: 0x566a84, roughness: 0.84 }),
+  new THREE.MeshStandardMaterial({ color: 0x6f5f86, roughness: 0.84 }),
+  new THREE.MeshStandardMaterial({ color: 0x5f7f6c, roughness: 0.84 }),
+  new THREE.MeshStandardMaterial({ color: 0x7c6a56, roughness: 0.84 })
 ];
-for (let tier = 0; tier < 3; tier++) {
-  for (let row = 0; row < 4; row++) {
-    const radius = 10 + tier * 10 + row * 2.1;
-    const y = 1.1 + tier * 2.1 + row * 0.62;
-    const steps = 22 + row * 3;
+for (let tier = 0; tier < 4; tier++) {
+  for (let row = 0; row < 5; row++) {
+    const radius = 12 + tier * 11 + row * 2.0;
+    const y = 1.0 + tier * 2.0 + row * 0.6;
+    const steps = 26 + tier * 4 + row * 2;
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
-      const a = THREE.MathUtils.lerp(Math.PI * 0.1, Math.PI * 0.9, t);
+      const a = THREE.MathUtils.lerp(Math.PI * 0.08, Math.PI * 0.92, t);
       const x = Math.cos(a) * radius;
-      const z = Math.sin(a) * radius + 3.0;
-      const block = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 1.2), seatingMats[tier]);
-      block.position.set(x, y, z);
-      block.lookAt(0, y, 2.0);
-      scene.add(block);
+      const z = Math.sin(a) * radius + 4.4;
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.56, 1.25), seatMats[(tier + row) % seatMats.length]);
+      seat.position.set(x, y, z);
+      seat.lookAt(0, y, 2.5);
+      scene.add(seat);
     }
   }
 }
+
+function addLightTower(x, z) {
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.28, 16, 12),
+    new THREE.MeshStandardMaterial({ color: 0x9ba4ab, roughness: 0.7 })
+  );
+  pole.position.set(x, 8, z);
+  scene.add(pole);
+
+  const panel = new THREE.Mesh(
+    new THREE.BoxGeometry(3.2, 1.8, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0xdde8f2, emissive: 0x556677, emissiveIntensity: 0.35 })
+  );
+  panel.position.set(x, 16, z);
+  panel.lookAt(0, 1.2, -8);
+  scene.add(panel);
+}
+addLightTower(-34, -8);
+addLightTower(34, -8);
+addLightTower(-46, -42);
+addLightTower(46, -42);
+
+const scoreboard = new THREE.Mesh(
+  new THREE.BoxGeometry(8, 4, 1),
+  new THREE.MeshStandardMaterial({ color: 0x182430, roughness: 0.6, emissive: 0x101820, emissiveIntensity: 0.4 })
+);
+scoreboard.position.set(0, 6.5, -52);
+scene.add(scoreboard);
+
+const scoreboardFace = new THREE.Mesh(
+  new THREE.PlaneGeometry(6.5, 2.8),
+  new THREE.MeshBasicMaterial({ color: 0x9dd5ff, transparent: true, opacity: 0.85 })
+);
+scoreboardFace.position.set(0, 6.5, -51.45);
+scene.add(scoreboardFace);
+
+const dugoutMat = new THREE.MeshStandardMaterial({ color: 0x4f5b67, roughness: 0.8 });
+for (const x of [-12.5, 12.5]) {
+  const dugout = new THREE.Mesh(new THREE.BoxGeometry(6, 2.2, 2.2), dugoutMat);
+  dugout.position.set(x, 1.1, 1.6);
+  scene.add(dugout);
+}
+
+function addSimplePlayer(x, z, facing = 0, shirt = 0xeeeeee, pants = 0x4c5e7b) {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  g.rotation.y = facing;
+
+  const legMat = new THREE.MeshStandardMaterial({ color: pants, roughness: 0.85 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: shirt, roughness: 0.8 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xe6c29c, roughness: 0.8 });
+
+  const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.65, 10), legMat);
+  leftLeg.position.set(-0.12, 0.33, 0);
+  g.add(leftLeg);
+
+  const rightLeg = leftLeg.clone();
+  rightLeg.position.x = 0.12;
+  g.add(rightLeg);
+
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.45, 6, 10), shirtMat);
+  torso.position.set(0, 0.95, 0);
+  g.add(torso);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
+  head.position.set(0, 1.45, 0);
+  g.add(head);
+
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.165, 0.08, 12), new THREE.MeshStandardMaterial({ color: 0x213248, roughness: 0.7 }));
+  cap.position.set(0, 1.56, 0);
+  g.add(cap);
+
+  scene.add(g);
+}
+
+// fielders + pitcher + catcher (simple primitives)
+addSimplePlayer(0, -17.4, Math.PI, 0xdbe5ef, 0x42556d); // pitcher
+addSimplePlayer(0, 1.3, Math.PI, 0x2f3f57, 0x364962); // catcher
+addSimplePlayer(-5, -9.5, Math.PI * 0.7, 0xdfe6f4, 0x4a5b73);
+addSimplePlayer(5, -9.5, Math.PI * 1.3, 0xdfe6f4, 0x4a5b73);
+addSimplePlayer(-11, -18, Math.PI * 0.65, 0xdfe6f4, 0x4a5b73);
+addSimplePlayer(11, -18, Math.PI * 1.35, 0xdfe6f4, 0x4a5b73);
+addSimplePlayer(0, -24, Math.PI, 0xdfe6f4, 0x4a5b73);
 
 // ------------------------------------------------------------
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.28, camera.position.z - activeConfig.strikeZoneDistance),
+  center: new THREE.Vector3(0, 1.16, camera.position.z - activeConfig.strikeZoneDistance),
   width: activeConfig.strikeZoneWidth,
   height: activeConfig.strikeZoneHeight,
   depth: activeConfig.strikeZoneDepth
@@ -244,14 +362,14 @@ const strikeZone = {
 const zoneGeo = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
 const zoneFill = new THREE.Mesh(
   zoneGeo,
-  new THREE.MeshBasicMaterial({ color: 0x66bbff, transparent: true, opacity: 0.14 })
+  new THREE.MeshBasicMaterial({ color: 0x67bcff, transparent: true, opacity: 0.14 })
 );
 zoneFill.position.copy(strikeZone.center);
 scene.add(zoneFill);
 
 const zoneEdges = new THREE.LineSegments(
   new THREE.EdgesGeometry(zoneGeo),
-  new THREE.LineBasicMaterial({ color: 0xe3f3ff })
+  new THREE.LineBasicMaterial({ color: 0xe7f6ff })
 );
 zoneEdges.position.copy(strikeZone.center);
 scene.add(zoneEdges);
@@ -287,32 +405,32 @@ updatePciTransform();
 const batPivot = new THREE.Group();
 camera.add(batPivot);
 
-const batIdlePos = new THREE.Vector3(1.02, -0.62, -1.46);
-const batLoadPos = new THREE.Vector3(1.08, -0.68, -1.5);
-const batContactPos = new THREE.Vector3(0.18, -0.34, -1.12);
-const batFollowPos = new THREE.Vector3(-0.58, -0.16, -1.02);
+const batIdlePos = new THREE.Vector3(1.02, -0.7, -1.72);
+const batLoadPos = new THREE.Vector3(1.14, -0.77, -1.78);
+const batContactPos = new THREE.Vector3(0.22, -0.37, -1.22);
+const batFollowPos = new THREE.Vector3(-0.72, -0.1, -1.08);
 
-const batIdleRot = new THREE.Euler(-0.28, -1.18, 1.06);
-const batLoadRot = new THREE.Euler(-0.5, -1.52, 1.14);
-const batContactRot = new THREE.Euler(-0.08, 0.08, 0.08);
-const batFollowRot = new THREE.Euler(0.16, 1.14, -0.56);
+const batIdleRot = new THREE.Euler(-0.22, -1.2, 1.08);
+const batLoadRot = new THREE.Euler(-0.5, -1.58, 1.16);
+const batContactRot = new THREE.Euler(-0.08, 0.1, 0.04);
+const batFollowRot = new THREE.Euler(0.2, 1.2, -0.62);
 
 batPivot.position.copy(batIdlePos);
 batPivot.rotation.copy(batIdleRot);
 
 const batMesh = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.045, 0.065, 1.52, 18),
-  new THREE.MeshStandardMaterial({ color: 0xc99660, roughness: 0.45, metalness: 0.02 })
+  new THREE.CylinderGeometry(0.045, 0.065, 1.58, 20),
+  new THREE.MeshStandardMaterial({ color: 0xcf9e68, roughness: 0.42, metalness: 0.02 })
 );
 batMesh.rotation.z = Math.PI / 2;
-batMesh.position.set(0.78, -0.08, -0.18);
+batMesh.position.set(0.84, -0.09, -0.2);
 batPivot.add(batMesh);
 
 const batCap = new THREE.Mesh(
-  new THREE.SphereGeometry(0.065, 16, 12),
-  new THREE.MeshStandardMaterial({ color: 0xa97745, roughness: 0.5 })
+  new THREE.SphereGeometry(0.068, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0xab7948, roughness: 0.48 })
 );
-batCap.position.set(-0.1, -0.08, -0.18);
+batCap.position.set(-0.08, -0.09, -0.2);
 batPivot.add(batCap);
 
 let isSwinging = false;
@@ -333,24 +451,24 @@ function updateBatSwing(nowMs) {
 
   const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / activeConfig.swingDurationMs, 0, 1);
 
-  if (t < 0.22) {
-    const a = smoothstep(t / 0.22);
+  if (t < 0.24) {
+    const a = smoothstep(t / 0.24);
     batPivot.rotation.set(
       THREE.MathUtils.lerp(batIdleRot.x, batLoadRot.x, a),
       THREE.MathUtils.lerp(batIdleRot.y, batLoadRot.y, a),
       THREE.MathUtils.lerp(batIdleRot.z, batLoadRot.z, a)
     );
     batPivot.position.lerpVectors(batIdlePos, batLoadPos, a);
-  } else if (t < 0.62) {
-    const a = smoothstep((t - 0.22) / 0.4);
+  } else if (t < 0.64) {
+    const a = smoothstep((t - 0.24) / 0.4);
     batPivot.rotation.set(
       THREE.MathUtils.lerp(batLoadRot.x, batContactRot.x, a),
       THREE.MathUtils.lerp(batLoadRot.y, batContactRot.y, a),
       THREE.MathUtils.lerp(batLoadRot.z, batContactRot.z, a)
     );
     batPivot.position.lerpVectors(batLoadPos, batContactPos, a);
-  } else if (t < 0.86) {
-    const a = smoothstep((t - 0.62) / 0.24);
+  } else if (t < 0.88) {
+    const a = smoothstep((t - 0.64) / 0.24);
     batPivot.rotation.set(
       THREE.MathUtils.lerp(batContactRot.x, batFollowRot.x, a),
       THREE.MathUtils.lerp(batContactRot.y, batFollowRot.y, a),
@@ -358,7 +476,7 @@ function updateBatSwing(nowMs) {
     );
     batPivot.position.lerpVectors(batContactPos, batFollowPos, a);
   } else {
-    const a = smoothstep((t - 0.86) / 0.14);
+    const a = smoothstep((t - 0.88) / 0.12);
     batPivot.rotation.set(
       THREE.MathUtils.lerp(batFollowRot.x, batIdleRot.x, a),
       THREE.MathUtils.lerp(batFollowRot.y, batIdleRot.y, a),
@@ -384,7 +502,7 @@ function updateBatSwing(nowMs) {
 }
 
 function getBatSweetSpotWorld() {
-  return batPivot.localToWorld(new THREE.Vector3(1.28, -0.08, -0.18));
+  return batPivot.localToWorld(new THREE.Vector3(1.34, -0.08, -0.2));
 }
 
 // ------------------------------------------------------------
@@ -444,7 +562,6 @@ function playPitchSound() {
   const ctx = ensureAudioContext();
   if (!ctx) return;
   const now = ctx.currentTime;
-
   const osc = ctx.createOscillator();
   const noise = ctx.createBufferSource();
   const gain = ctx.createGain();
@@ -482,7 +599,6 @@ function playHitSound(strong = false) {
   const ctx = ensureAudioContext();
   if (!ctx) return;
   const now = ctx.currentTime;
-
   const osc = ctx.createOscillator();
   const noise = ctx.createBufferSource();
   const gain = ctx.createGain();
@@ -520,6 +636,7 @@ function playHitSound(strong = false) {
 const statusEl = document.getElementById('status');
 const detailsEl = document.getElementById('details');
 const difficultyEl = document.getElementById('difficulty');
+let hudTimer = null;
 
 if (difficultyEl) {
   difficultyEl.value = currentDifficulty;
@@ -529,8 +646,6 @@ if (difficultyEl) {
     scheduleNextPitch();
   });
 }
-
-let hudTimer = null;
 
 function showResult(text, mph = null) {
   statusEl.textContent = text;
@@ -605,11 +720,14 @@ function scheduleNextPitch() {
 scheduleNextPitch();
 
 // ------------------------------------------------------------
-// INPUT
+// INPUT (PCI ATTACHED TO CURSOR POSITION)
 // ------------------------------------------------------------
 window.addEventListener('mousemove', (e) => {
-  pciOffsetX += e.movementX * activeConfig.pciSensitivity;
-  pciOffsetY -= e.movementY * activeConfig.pciSensitivity;
+  const nx = e.clientX / window.innerWidth;
+  const ny = e.clientY / window.innerHeight;
+
+  pciOffsetX = (nx - 0.5) * strikeZone.width;
+  pciOffsetY = (0.5 - ny) * strikeZone.height;
 
   const halfW = strikeZone.width * 0.5;
   const halfH = strikeZone.height * 0.5;
@@ -672,7 +790,7 @@ function classifyContact(pciDist, timingDist, batDist) {
 
 function tryResolveContact() {
   const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  if (timingDist > activeConfig.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.55) {
+  if (timingDist > activeConfig.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.6) {
     return;
   }
 
@@ -697,12 +815,12 @@ function tryResolveContact() {
   if (quality === 'PERFECT') impulseMag = activeConfig.perfectImpulse;
 
   const hitDir = new CANNON.Vec3(
-    xInfluence * 0.78,
-    0.8 + yInfluence * 0.58 + timingScale * 0.2,
-    1.06 - Math.abs(xInfluence) * 0.16
+    xInfluence * 0.82,
+    0.82 + yInfluence * 0.62 + timingScale * 0.2,
+    1.05 - Math.abs(xInfluence) * 0.14
   );
   hitDir.normalize();
-  hitDir.scale(impulseMag * (0.8 + timingScale * 0.35), hitDir);
+  hitDir.scale(impulseMag * (0.82 + timingScale * 0.35), hitDir);
 
   const preSpeed = ballBody.velocity.length();
   if (preSpeed > 42) ballBody.velocity.scale(42 / preSpeed, ballBody.velocity);
@@ -715,7 +833,7 @@ function tryResolveContact() {
 }
 
 function maybeAutoMiss() {
-  if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.6) {
+  if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.72) {
     swingUsedThisPitch = true;
     showResult('MISS');
     scheduleNextPitch();
@@ -727,9 +845,9 @@ function maybeAutoMiss() {
 // ------------------------------------------------------------
 function shouldResetBallOutOfPlay() {
   return (
-    ballBody.position.z > 16 ||
-    Math.abs(ballBody.position.x) > 22 ||
-    Math.abs(ballBody.position.z) > 45 ||
+    ballBody.position.z > 18 ||
+    Math.abs(ballBody.position.x) > 24 ||
+    Math.abs(ballBody.position.z) > 48 ||
     ballBody.position.y < -4
   );
 }
