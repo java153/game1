@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-// IMPORTANT: change "game1" to your GitHub repository name for Pages deployment.
+// Use a relative base so the build works on GitHub Pages under any repo/user path.
 export default defineConfig({
-  base: '/game1/'
+  base: './'
 });

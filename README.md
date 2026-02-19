@@ -28,30 +28,32 @@ npm run preview
 
 Production files are generated in `dist/`.
 
-## Deploy to GitHub Pages
+## Important GitHub Pages note (this is what caused blank page)
 
-### 1) Set the repo base path
+If you use Vite, GitHub Pages should publish the **built site** (`dist` artifact), not raw source files.
 
-In `vite.config.js`, update:
+### Correct deployment option (recommended)
+
+This repo includes a Pages workflow: `.github/workflows/deploy-pages.yml`.
+
+1. Push to `main`.
+2. In GitHub: **Settings → Pages → Build and deployment → Source = GitHub Actions**.
+3. The workflow builds with Vite and deploys `dist` automatically.
+
+### If you deploy manually
+
+- Run `npm run build`.
+- Publish the generated `dist/` output.
+
+## Vite base path
+
+`vite.config.js` uses:
 
 ```js
-base: '/game1/'
+base: './'
 ```
 
-Change `game1` to your repository name.
-
-### 2) Deploy `dist/` manually (simple)
-
-1. Build:
-   ```bash
-   npm run build
-   ```
-2. Push the contents of `dist/` to a `gh-pages` branch (or use a Pages deploy action).
-3. In GitHub repo settings, enable **Pages** and set source to that branch/folder.
-
-### Optional: GitHub Actions deployment
-
-You can also use the standard GitHub Pages Actions workflow (`actions/upload-pages-artifact` + `actions/deploy-pages`) to deploy `dist/` on every push to `main`.
+This relative base avoids repo-name/path mismatches and works for GitHub Pages subpaths.
 
 ---
 
