@@ -58,13 +58,16 @@ This repo includes `.github/workflows/deploy-pages.yml` which builds and deploys
 
 ## Controls
 
-- **Left click bat** to grab.
-- **Drag mouse left/right** to swing.
-- **Drag mouse up/down** for a little tilt.
-- **Release** to let bat settle physically.
-- **R** to reset bat target + ball.
+- **Move mouse** to position PCI in the strike zone.
+- **Z** to swing.
+- **R** to reset pitch + PCI.
 
 ## Notes
 
 - If you only open `index.html` directly as a file without Vite/build output, module resolution may fail.
 - Always use `npm run dev` during development, or deploy `dist/` for production.
+
+
+### Troubleshooting GitHub Actions deploys
+
+If your Actions log says a lockfile is missing (for example around setup-node cache or `npm ci`), this repo workflow uses `npm install` so a lockfile is not required.
