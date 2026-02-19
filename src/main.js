@@ -5,20 +5,20 @@ import * as CANNON from 'cannon-es';
 // TUNING VARIABLES
 // ------------------------------------------------------------
 const config = {
-  cameraFov: 74,
+  cameraFov: 82,
 
-  strikeZoneDistance: 0.95,
-  strikeZoneWidth: 1.2,
-  strikeZoneHeight: 1.55,
-  strikeZoneDepth: 0.14,
+  strikeZoneDistance: 1.2,
+  strikeZoneWidth: 1.24,
+  strikeZoneHeight: 1.7,
+  strikeZoneDepth: 0.16,
 
   pciSensitivity: 0.0018,
   pciRadius: 0.13,
 
-  swingDurationMs: 210,
+  swingDurationMs: 200,
   swingCooldownMs: 380,
-  contactWindowStart: 0.22,
-  contactWindowEnd: 0.74,
+  contactWindowStart: 0.18,
+  contactWindowEnd: 0.8,
 
   postSwingDelayMinMs: 1500,
   postSwingDelayMaxMs: 2500,
@@ -28,14 +28,14 @@ const config = {
   breakX: 1.8,
   breakY: 1.25,
 
-  swingWindowZ: 0.82,
-  hitPlaneTolerance: 0.62,
-  perfectPciDist: 0.3,
-  goodPciDist: 0.56,
-  perfectBatDist: 0.29,
-  goodBatDist: 0.53,
-  perfectTiming: 0.2,
-  goodTiming: 0.42,
+  swingWindowZ: 1.05,
+  hitPlaneTolerance: 0.78,
+  perfectPciDist: 0.38,
+  goodPciDist: 0.72,
+  perfectBatDist: 0.36,
+  goodBatDist: 0.7,
+  perfectTiming: 0.26,
+  goodTiming: 0.56,
 
   weakImpulse: 3.4,
   goodImpulse: 5.8,
@@ -59,8 +59,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   350
 );
-camera.position.set(0, 1.66, 2.18);
-camera.lookAt(0, 1.32, -1.7);
+camera.position.set(0, 1.7, 2.85);
+camera.lookAt(0, 1.28, -1.75);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -179,7 +179,7 @@ for (let tier = 0; tier < 3; tier++) {
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.32, camera.position.z - config.strikeZoneDistance),
+  center: new THREE.Vector3(0, 1.28, camera.position.z - config.strikeZoneDistance),
   width: config.strikeZoneWidth,
   height: config.strikeZoneHeight,
   depth: config.strikeZoneDepth
@@ -231,15 +231,15 @@ updatePciTransform();
 const batPivot = new THREE.Group();
 camera.add(batPivot);
 
-const batIdlePos = new THREE.Vector3(0.7, -0.44, -1.02);
-const batLoadPos = new THREE.Vector3(0.74, -0.48, -1.0);
-const batContactPos = new THREE.Vector3(0.1, -0.26, -0.9);
-const batFollowPos = new THREE.Vector3(-0.35, -0.12, -0.86);
+const batIdlePos = new THREE.Vector3(1.02, -0.62, -1.46);
+const batLoadPos = new THREE.Vector3(1.08, -0.68, -1.5);
+const batContactPos = new THREE.Vector3(0.18, -0.34, -1.12);
+const batFollowPos = new THREE.Vector3(-0.58, -0.16, -1.02);
 
-const batIdleRot = new THREE.Euler(-0.34, -1.2, 1.03);
-const batLoadRot = new THREE.Euler(-0.52, -1.38, 1.1);
-const batContactRot = new THREE.Euler(-0.1, -0.02, 0.22);
-const batFollowRot = new THREE.Euler(0.08, 0.86, -0.36);
+const batIdleRot = new THREE.Euler(-0.28, -1.18, 1.06);
+const batLoadRot = new THREE.Euler(-0.5, -1.52, 1.14);
+const batContactRot = new THREE.Euler(-0.08, 0.08, 0.08);
+const batFollowRot = new THREE.Euler(0.16, 1.14, -0.56);
 
 batPivot.position.copy(batIdlePos);
 batPivot.rotation.copy(batIdleRot);
@@ -249,7 +249,7 @@ const batMesh = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: 0xc99660, roughness: 0.45, metalness: 0.02 })
 );
 batMesh.rotation.z = Math.PI / 2;
-batMesh.position.set(0.64, -0.08, -0.18);
+batMesh.position.set(0.78, -0.08, -0.18);
 batPivot.add(batMesh);
 
 const batCap = new THREE.Mesh(
@@ -328,7 +328,7 @@ function updateBatSwing(nowMs) {
 }
 
 function getBatSweetSpotWorld() {
-  return batPivot.localToWorld(new THREE.Vector3(1.2, -0.08, -0.18));
+  return batPivot.localToWorld(new THREE.Vector3(1.28, -0.08, -0.18));
 }
 
 // ------------------------------------------------------------
@@ -561,8 +561,9 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (key !== 'z') return;
+  if (key !== ' ' && e.code !== 'Space') return;
 
+  e.preventDefault();
   const now = performance.now();
   ensureAudioContext();
 
@@ -603,16 +604,16 @@ function classifyContact(pciDist, timingDist, batDist) {
 
 function tryResolveContact() {
   const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.4) {
+  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.55) {
     return;
   }
 
   const pciDist = pciBallDistance();
-  if (pciDist > config.goodPciDist * 1.75) return;
+  if (pciDist > config.goodPciDist * 2.0) return;
 
   const sweetSpot = getBatSweetSpotWorld();
   const batDist = sweetSpot.distanceTo(ballMesh.position);
-  if (batDist > config.goodBatDist * 1.6) return;
+  if (batDist > config.goodBatDist * 1.95) return;
 
   swingContactResolved = true;
   swingMissQueued = false;
@@ -646,7 +647,7 @@ function tryResolveContact() {
 }
 
 function maybeAutoMiss() {
-  if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.35) {
+  if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.6) {
     swingUsedThisPitch = true;
     showResult('MISS');
     scheduleNextPitch();
