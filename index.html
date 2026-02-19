@@ -19,7 +19,7 @@
     <div id="hud">
       <div class="title">PCI Hitting Sim</div>
       <div><strong>Mouse:</strong> PCI follows your cursor position directly</div>
-      <div><strong>SPACE:</strong> swing bat &nbsp; <strong>R:</strong> reset pitch</div>
+      <div><strong>SPACE:</strong> swing bat &nbsp; <strong>R:</strong> reset pitch &nbsp; <strong>M:</strong> music</div>
       <label class="difficulty-row">Difficulty:
         <select id="difficulty">
           <option value="easy" selected>Easy</option>
@@ -29,6 +29,11 @@
       </label>
       <div id="status">TRACK THE BALL</div>
       <div id="details"></div>
+      <div id="score">Score 0 | H 0 | HR 0 | F 0 | O 0</div>
+    </div>
+    <div id="minimap-wrap">
+      <div class="map-title">Landing Map</div>
+      <canvas id="minimap" width="170" height="130"></canvas>
     </div>
     <script type="module" src="./src/main.js"></script>
   </body>

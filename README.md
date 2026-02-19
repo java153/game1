@@ -61,7 +61,9 @@ This repo includes `.github/workflows/deploy-pages.yml` which builds and deploys
 - **Move mouse** and the PCI follows your cursor directly inside the strike zone.
 - **Spacebar** to swing.
 - **R** to reset pitch + PCI.
+- **M** to toggle simple background baseball music.
 - **Difficulty selector (HUD):** Easy / Normal / Hard.
+- **Top-right minimap:** red dots mark where batted balls land.
 
 ## Notes
 

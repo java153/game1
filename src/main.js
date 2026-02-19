@@ -5,11 +5,11 @@ import * as CANNON from 'cannon-es';
 // TUNING VARIABLES
 // ------------------------------------------------------------
 const baseConfig = {
-  cameraFov: 88,
+  cameraFov: 90,
 
-  strikeZoneDistance: 1.25,
-  strikeZoneWidth: 1.3,
-  strikeZoneHeight: 1.78,
+  strikeZoneDistance: 1.28,
+  strikeZoneWidth: 1.32,
+  strikeZoneHeight: 1.82,
   strikeZoneDepth: 0.18,
 
   pciRadius: 0.13,
@@ -110,8 +110,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   420
 );
-camera.position.set(0, 1.78, 3.55);
-camera.lookAt(0, 1.18, -1.7);
+camera.position.set(0, 1.8, 3.75);
+camera.lookAt(0, 1.14, -1.72);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -121,11 +121,10 @@ document.body.appendChild(renderer.domElement);
 renderer.domElement.style.cursor = 'crosshair';
 
 scene.add(new THREE.HemisphereLight(0xecf5ff, 0x2d4354, 0.98));
-const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+const sun = new THREE.DirectionalLight(0xffffff, 1.12);
 sun.position.set(16, 20, 12);
 scene.add(sun);
 
-// Sky gradient dome
 const skyGeo = new THREE.SphereGeometry(300, 36, 22);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
@@ -159,10 +158,10 @@ const skyMat = new THREE.ShaderMaterial({
 scene.add(new THREE.Mesh(skyGeo, skyMat));
 
 // ------------------------------------------------------------
-// STADIUM ENVIRONMENT (FLESHED OUT)
+// STADIUM ENVIRONMENT
 // ------------------------------------------------------------
 const field = new THREE.Mesh(
-  new THREE.PlaneGeometry(220, 220),
+  new THREE.PlaneGeometry(240, 240),
   new THREE.MeshStandardMaterial({ color: 0x2e8f46, roughness: 0.95 })
 );
 field.rotation.x = -Math.PI / 2;
@@ -198,18 +197,18 @@ function addBase(x, z) {
   base.position.set(x, 0.04, z);
   scene.add(base);
 }
-addBase(6.5, -6.5); // 1st
-addBase(-6.5, -6.5); // 3rd
-addBase(0, -13); // 2nd
+addBase(6.5, -6.5);
+addBase(-6.5, -6.5);
+addBase(0, -13);
 
 const foulLineMat = new THREE.MeshBasicMaterial({ color: 0xf4f4f4 });
-const foulLineA = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 90), foulLineMat);
-foulLineA.position.set(31.9, 0.015, -31.9);
+const foulLineA = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 92), foulLineMat);
+foulLineA.position.set(32.6, 0.015, -32.6);
 foulLineA.rotation.y = Math.PI / 4;
 scene.add(foulLineA);
 
-const foulLineB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 90), foulLineMat);
-foulLineB.position.set(-31.9, 0.015, -31.9);
+const foulLineB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 92), foulLineMat);
+foulLineB.position.set(-32.6, 0.015, -32.6);
 foulLineB.rotation.y = -Math.PI / 4;
 scene.add(foulLineB);
 
@@ -228,18 +227,18 @@ backstopNet.position.set(0, 3.95, 3.5);
 scene.add(backstopNet);
 
 const outfieldWall = new THREE.Mesh(
-  new THREE.CylinderGeometry(52, 52, 4.4, 96, 1, true, Math.PI * 0.04, Math.PI * 0.92),
+  new THREE.CylinderGeometry(52, 52, 4.4, 96, 1, true),
   new THREE.MeshStandardMaterial({ color: 0x1f4766, roughness: 0.82, side: THREE.DoubleSide })
 );
-outfieldWall.position.set(0, 2.2, -48);
+outfieldWall.position.set(0, 2.2, -22);
 scene.add(outfieldWall);
 
 const warningTrack = new THREE.Mesh(
-  new THREE.RingGeometry(46.5, 52, 90, 1, Math.PI * 0.04, Math.PI * 0.92),
+  new THREE.RingGeometry(46.5, 52, 120),
   new THREE.MeshStandardMaterial({ color: 0x8b6e46, roughness: 0.9, side: THREE.DoubleSide })
 );
 warningTrack.rotation.x = -Math.PI / 2;
-warningTrack.position.set(0, 0.011, -48);
+warningTrack.position.set(0, 0.011, -22);
 scene.add(warningTrack);
 
 const seatMats = [
@@ -249,18 +248,18 @@ const seatMats = [
   new THREE.MeshStandardMaterial({ color: 0x7c6a56, roughness: 0.84 })
 ];
 for (let tier = 0; tier < 4; tier++) {
-  for (let row = 0; row < 5; row++) {
-    const radius = 12 + tier * 11 + row * 2.0;
+  for (let row = 0; row < 6; row++) {
+    const radius = 16 + tier * 11 + row * 2.0;
     const y = 1.0 + tier * 2.0 + row * 0.6;
-    const steps = 26 + tier * 4 + row * 2;
+    const steps = 58 + tier * 6 + row * 2;
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
-      const a = THREE.MathUtils.lerp(Math.PI * 0.08, Math.PI * 0.92, t);
+      const a = THREE.MathUtils.lerp(0, Math.PI * 2, t);
       const x = Math.cos(a) * radius;
-      const z = Math.sin(a) * radius + 4.4;
+      const z = Math.sin(a) * radius - 10;
       const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.56, 1.25), seatMats[(tier + row) % seatMats.length]);
       seat.position.set(x, y, z);
-      seat.lookAt(0, y, 2.5);
+      seat.lookAt(0, y, -6);
       scene.add(seat);
     }
   }
@@ -340,9 +339,7 @@ function addSimplePlayer(x, z, facing = 0, shirt = 0xeeeeee, pants = 0x4c5e7b) {
   scene.add(g);
 }
 
-// fielders + pitcher + catcher (simple primitives)
 addSimplePlayer(0, -17.4, Math.PI, 0xdbe5ef, 0x42556d); // pitcher
-addSimplePlayer(0, 1.3, Math.PI, 0x2f3f57, 0x364962); // catcher
 addSimplePlayer(-5, -9.5, Math.PI * 0.7, 0xdfe6f4, 0x4a5b73);
 addSimplePlayer(5, -9.5, Math.PI * 1.3, 0xdfe6f4, 0x4a5b73);
 addSimplePlayer(-11, -18, Math.PI * 0.65, 0xdfe6f4, 0x4a5b73);
@@ -353,7 +350,7 @@ addSimplePlayer(0, -24, Math.PI, 0xdfe6f4, 0x4a5b73);
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.16, camera.position.z - activeConfig.strikeZoneDistance),
+  center: new THREE.Vector3(0, 1.12, camera.position.z - activeConfig.strikeZoneDistance),
   width: activeConfig.strikeZoneWidth,
   height: activeConfig.strikeZoneHeight,
   depth: activeConfig.strikeZoneDepth
@@ -385,6 +382,11 @@ const pciDot = new THREE.Mesh(
 );
 pciGroup.add(pciRing, pciDot);
 scene.add(pciGroup);
+
+const pciPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(strikeZone.center.z + strikeZone.depth * 0.55));
+const raycaster = new THREE.Raycaster();
+const mouseNdc = new THREE.Vector2(0, 0);
+const rayHit = new THREE.Vector3();
 
 let pciOffsetX = 0;
 let pciOffsetY = 0;
@@ -496,6 +498,7 @@ function updateBatSwing(nowMs) {
     batPivot.position.copy(batIdlePos);
     if (!swingContactResolved && swingMissQueued) {
       showResult('MISS');
+      registerOut();
     }
     scheduleNextPitch();
   }
@@ -544,9 +547,12 @@ const ballMesh = new THREE.Mesh(
 scene.add(ballMesh);
 
 // ------------------------------------------------------------
-// AUDIO (procedural)
+// AUDIO (procedural + simple background music)
 // ------------------------------------------------------------
 let audioCtx = null;
+let musicStarted = false;
+let musicTimer = null;
+let musicStep = 0;
 
 function ensureAudioContext() {
   if (!audioCtx) {
@@ -630,13 +636,94 @@ function playHitSound(strong = false) {
   noise.stop(now + 0.07);
 }
 
+function playMusicTick() {
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+  const notes = [261.63, 329.63, 392.0, 329.63, 293.66, 349.23, 440.0, 349.23];
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = notes[musicStep % notes.length];
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.035, now + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.36);
+  musicStep += 1;
+}
+
+function startMusic() {
+  if (musicStarted) return;
+  musicStarted = true;
+  playMusicTick();
+  musicTimer = setInterval(playMusicTick, 360);
+}
+
 // ------------------------------------------------------------
-// HUD
+// HUD + SCORE + MINIMAP
 // ------------------------------------------------------------
 const statusEl = document.getElementById('status');
 const detailsEl = document.getElementById('details');
 const difficultyEl = document.getElementById('difficulty');
+const scoreEl = document.getElementById('score');
+const minimapCanvas = document.getElementById('minimap');
+const mapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
 let hudTimer = null;
+
+const gameStats = {
+  score: 0,
+  hits: 0,
+  homeruns: 0,
+  fouls: 0,
+  outs: 0
+};
+
+const minimapDots = [];
+
+function updateScoreText() {
+  if (!scoreEl) return;
+  scoreEl.textContent = `Score ${gameStats.score} | H ${gameStats.hits} | HR ${gameStats.homeruns} | F ${gameStats.fouls} | O ${gameStats.outs}`;
+}
+
+function drawMinimap() {
+  if (!mapCtx || !minimapCanvas) return;
+  const w = minimapCanvas.width;
+  const h = minimapCanvas.height;
+  mapCtx.clearRect(0, 0, w, h);
+
+  mapCtx.fillStyle = '#113024';
+  mapCtx.fillRect(0, 0, w, h);
+
+  mapCtx.strokeStyle = '#7ad090';
+  mapCtx.lineWidth = 2;
+  mapCtx.beginPath();
+  mapCtx.arc(w / 2, h - 6, Math.min(w * 0.45, h * 0.85), Math.PI * 1.08, Math.PI * 1.92);
+  mapCtx.stroke();
+
+  mapCtx.strokeStyle = '#d8e4f5';
+  mapCtx.beginPath();
+  mapCtx.moveTo(w / 2, h - 6);
+  mapCtx.lineTo(8, 18);
+  mapCtx.moveTo(w / 2, h - 6);
+  mapCtx.lineTo(w - 8, 18);
+  mapCtx.stroke();
+
+  mapCtx.fillStyle = '#e74c3c';
+  for (const dot of minimapDots) {
+    mapCtx.beginPath();
+    mapCtx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
+    mapCtx.fill();
+  }
+}
+
+drawMinimap();
+updateScoreText();
 
 if (difficultyEl) {
   difficultyEl.value = currentDifficulty;
@@ -659,10 +746,27 @@ function showResult(text, mph = null) {
   }, 900);
 }
 
+function registerOut() {
+  gameStats.outs += 1;
+  updateScoreText();
+}
+
+function addMinimapLanding(worldX, worldZ) {
+  if (!mapCtx || !minimapCanvas) return;
+  const mapScale = 1.55;
+  const mx = minimapCanvas.width * 0.5 + worldX * mapScale;
+  const my = minimapCanvas.height - 6 + worldZ * mapScale;
+  minimapDots.push({ x: THREE.MathUtils.clamp(mx, 5, minimapCanvas.width - 5), y: THREE.MathUtils.clamp(my, 5, minimapCanvas.height - 5) });
+  if (minimapDots.length > 12) minimapDots.shift();
+  drawMinimap();
+}
+
 // ------------------------------------------------------------
 // PITCHING
 // ------------------------------------------------------------
 const spawnPos = new CANNON.Vec3(0, 1.48, -17.5);
+let ballWasHit = false;
+let ballLandingTracked = false;
 
 function randomPitchVelocity() {
   const r = Math.random();
@@ -703,6 +807,8 @@ function queueBallAtMound() {
   swingContactResolved = false;
   swingMissQueued = false;
   pitchInFlight = false;
+  ballWasHit = false;
+  ballLandingTracked = false;
 }
 
 function launchPitch() {
@@ -720,24 +826,32 @@ function scheduleNextPitch() {
 scheduleNextPitch();
 
 // ------------------------------------------------------------
-// INPUT (PCI ATTACHED TO CURSOR POSITION)
+// INPUT (PCI ATTACHED TO CURSOR)
 // ------------------------------------------------------------
 window.addEventListener('mousemove', (e) => {
-  const nx = e.clientX / window.innerWidth;
-  const ny = e.clientY / window.innerHeight;
+  ensureAudioContext();
+  startMusic();
 
-  pciOffsetX = (nx - 0.5) * strikeZone.width;
-  pciOffsetY = (0.5 - ny) * strikeZone.height;
+  mouseNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouseNdc, camera);
 
-  const halfW = strikeZone.width * 0.5;
-  const halfH = strikeZone.height * 0.5;
-  pciOffsetX = THREE.MathUtils.clamp(pciOffsetX, -halfW, halfW);
-  pciOffsetY = THREE.MathUtils.clamp(pciOffsetY, -halfH, halfH);
-  updatePciTransform();
+  if (raycaster.ray.intersectPlane(pciPlane, rayHit)) {
+    pciOffsetX = rayHit.x - strikeZone.center.x;
+    pciOffsetY = rayHit.y - strikeZone.center.y;
+
+    const halfW = strikeZone.width * 0.5;
+    const halfH = strikeZone.height * 0.5;
+    pciOffsetX = THREE.MathUtils.clamp(pciOffsetX, -halfW, halfW);
+    pciOffsetY = THREE.MathUtils.clamp(pciOffsetY, -halfH, halfH);
+    updatePciTransform();
+  }
 });
 
 window.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
+  ensureAudioContext();
+  startMusic();
 
   if (key === 'r') {
     pciOffsetX = 0;
@@ -747,11 +861,23 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (key === 'm') {
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+      musicStarted = false;
+      showResult('MUSIC OFF');
+    } else {
+      startMusic();
+      showResult('MUSIC ON');
+    }
+    return;
+  }
+
   if (key !== ' ' && e.code !== 'Space') return;
 
   e.preventDefault();
   const now = performance.now();
-  ensureAudioContext();
 
   if (now < nextSwingAllowedMs || isSwinging || swingUsedThisPitch || !pitchInFlight) return;
 
@@ -764,12 +890,17 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ------------------------------------------------------------
-// HIT DETECTION
+// HIT DETECTION + SCORING
 // ------------------------------------------------------------
 function pciBallDistance() {
   const dx = ballBody.position.x - (strikeZone.center.x + pciOffsetX);
   const dy = ballBody.position.y - (strikeZone.center.y + pciOffsetY);
   return Math.hypot(dx, dy);
+}
+
+function isFairBall(x, z) {
+  if (z > 0) return false;
+  return Math.abs(x) <= Math.abs(z) * 1.05;
 }
 
 function classifyContact(pciDist, timingDist, batDist) {
@@ -803,6 +934,7 @@ function tryResolveContact() {
 
   swingContactResolved = true;
   swingMissQueued = false;
+  ballWasHit = true;
 
   const quality = classifyContact(pciDist, timingDist, batDist);
 
@@ -832,10 +964,39 @@ function tryResolveContact() {
   playHitSound(quality !== 'WEAK');
 }
 
+function handleBallLanding() {
+  if (!ballWasHit || ballLandingTracked) return;
+  if (ballBody.position.y > 0.13) return;
+
+  ballLandingTracked = true;
+  const x = ballBody.position.x;
+  const z = ballBody.position.z;
+  addMinimapLanding(x, z);
+
+  const fair = isFairBall(x, z);
+  const distance = Math.hypot(x, z);
+
+  if (!fair) {
+    gameStats.fouls += 1;
+    showResult('FOUL BALL');
+  } else if (distance > 48) {
+    gameStats.hits += 1;
+    gameStats.homeruns += 1;
+    gameStats.score += 1;
+    showResult('HOME RUN');
+  } else {
+    gameStats.hits += 1;
+    gameStats.score += distance > 30 ? 1 : 0;
+    showResult(distance > 30 ? 'FAIR HIT - RUN SCORED' : 'FAIR HIT');
+  }
+  updateScoreText();
+}
+
 function maybeAutoMiss() {
   if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.72) {
     swingUsedThisPitch = true;
     showResult('MISS');
+    registerOut();
     scheduleNextPitch();
   }
 }
@@ -884,6 +1045,7 @@ function animate() {
   }
 
   updateBatSwing(now);
+  handleBallLanding();
 
   maybeAutoMiss();
   if (pitchInFlight && shouldResetBallOutOfPlay()) {
