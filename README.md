@@ -1,14 +1,15 @@
 # Barebones 3D Baseball Hitting Sim
 
-A simple static-site baseball hitting prototype built with **Three.js** + **cannon-es** + **Vite**.
+A simple 3D baseball hitting prototype built with **Three.js** (rendering) and **cannon-es** (physics), bundled by **Vite**.
 
-## Features
+## Project structure
 
-- 3D scene with ground, home plate, bat, and pitched ball.
-- Physics world with gravity and bat/ball collisions.
-- Mouse-driven bat swing using a **dynamic bat body + hinge constraint motor**.
-- Repeating pitch loop with ball reset conditions.
-- Tiny HUD showing last hit speed and travel distance.
+- `/index.html`
+- `/src/main.js`
+- `/src/style.css`
+- `/vite.config.js`
+- `/package.json`
+- `/README.md`
 
 ## Run locally
 
@@ -17,49 +18,53 @@ npm install
 npm run dev
 ```
 
-Then open the local Vite URL shown in your terminal.
+Open the local Vite URL shown in the terminal.
 
-## Build for production
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Production files are generated in `dist/`.
+Vite outputs static files into `dist/`.
 
-## Important GitHub Pages note (this is what caused blank page)
+## Deploy to GitHub Pages
 
-If you use Vite, GitHub Pages should publish the **built site** (`dist` artifact), not raw source files.
+### 1) Update Vite base path
 
-### Correct deployment option (recommended)
-
-This repo includes a Pages workflow: `.github/workflows/deploy-pages.yml`.
-
-1. Push to `main`.
-2. In GitHub: **Settings → Pages → Build and deployment → Source = GitHub Actions**.
-3. The workflow builds with Vite and deploys `dist` automatically.
-
-### If you deploy manually
-
-- Run `npm run build`.
-- Publish the generated `dist/` output.
-
-## Vite base path
-
-`vite.config.js` uses:
+In `vite.config.js`, set:
 
 ```js
-base: './'
+base: '/game1/'
 ```
 
-This relative base avoids repo-name/path mismatches and works for GitHub Pages subpaths.
+Replace `game1` with your real repository name.
 
----
+### 2) Deploy options
 
-### Controls
+#### Option A: GitHub Actions (recommended)
 
-- **Left click on bat** to grab.
+This repo includes `.github/workflows/deploy-pages.yml` which builds and deploys `dist/`.
+
+1. Push to `main`.
+2. In GitHub: **Settings → Pages → Source = GitHub Actions**.
+3. Workflow deploys the built site automatically.
+
+#### Option B: Manual deployment
+
+1. Run `npm run build`.
+2. Publish the generated `dist/` folder to `gh-pages` (or your chosen Pages branch/folder).
+
+## Controls
+
+- **Left click bat** to grab.
 - **Drag mouse left/right** to swing.
-- **Release mouse** to let bat settle.
-- **R key** resets ball + bat target angle.
+- **Drag mouse up/down** for a little tilt.
+- **Release** to let bat settle physically.
+- **R** to reset bat target + ball.
+
+## Notes
+
+- If you only open `index.html` directly as a file without Vite/build output, module resolution may fail.
+- Always use `npm run dev` during development, or deploy `dist/` for production.

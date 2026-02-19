@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-// Use a relative base so the build works on GitHub Pages under any repo/user path.
+// IMPORTANT: set this to your GitHub repo name for Pages, e.g. /my-repo/
 export default defineConfig({
-  base: './'
+  base: '/game1/'
 });

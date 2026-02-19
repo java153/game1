@@ -2,67 +2,67 @@ import './style.css';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
-// ------------------------
-// Tunable parameters
-// ------------------------
+// ------------------------------------------------------------
+// Tuning parameters (requested by spec)
+// ------------------------------------------------------------
 const config = {
   pitchSpeed: 22,
   pitchInterval: 1000,
-  batMotorStrength: 28,
-  batDamping: 0.95,
+  batMotorStrength: 30,
+  batDamping: 0.92,
   maxBatAngle: Math.PI * 0.75,
+  maxBatTilt: 0.35,
   mouseSensitivity: 0.005,
+  tiltSensitivity: 0.004,
   restitution: 0.55,
-  friction: 0.35
+  friction: 0.32
 };
 
 const fixedDt = 1 / 120;
 const maxSubSteps = 5;
 
-// ------------------------
-// Three.js setup
-// ------------------------
+// ------------------------------------------------------------
+// Three.js scene setup
+// ------------------------------------------------------------
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x7fa4cc);
+scene.background = new THREE.Color(0x8db1d5);
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(5, 2.4, 8.5);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 250);
+camera.position.set(4.8, 2.6, 8.4);
 camera.lookAt(0, 1, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x334455, 0.95);
-scene.add(hemiLight);
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-dirLight.position.set(6, 9, 4);
+scene.add(new THREE.HemisphereLight(0xe0f0ff, 0x314759, 0.95));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.05);
+dirLight.position.set(8, 10, 4);
 scene.add(dirLight);
 
 const groundMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(60, 60),
-  new THREE.MeshStandardMaterial({ color: 0x2d7c38, roughness: 0.95 })
+  new THREE.MeshStandardMaterial({ color: 0x2f8b45, roughness: 0.96 })
 );
 groundMesh.rotation.x = -Math.PI / 2;
 scene.add(groundMesh);
 
-const plateMesh = new THREE.Mesh(
+const homePlateMesh = new THREE.Mesh(
   new THREE.BoxGeometry(0.6, 0.04, 0.6),
-  new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.6 })
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72 })
 );
-plateMesh.position.set(0, 0.02, 0);
-scene.add(plateMesh);
+homePlateMesh.position.set(0, 0.02, 0);
+scene.add(homePlateMesh);
 
-// ------------------------
-// Physics setup
-// ------------------------
+// ------------------------------------------------------------
+// Cannon world setup
+// ------------------------------------------------------------
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.broadphase = new CANNON.SAPBroadphase(world);
-world.allowSleep = true;
 world.solver.iterations = 14;
 world.solver.tolerance = 1e-4;
+world.allowSleep = true;
 
 const ballMaterial = new CANNON.Material('ball');
 const batMaterial = new CANNON.Material('bat');
@@ -76,7 +76,7 @@ world.addContactMaterial(
 );
 world.addContactMaterial(
   new CANNON.ContactMaterial(ballMaterial, batMaterial, {
-    restitution: config.restitution + 0.1,
+    restitution: config.restitution + 0.12,
     friction: config.friction * 0.7
   })
 );
@@ -86,15 +86,15 @@ groundBody.addShape(new CANNON.Plane());
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 world.addBody(groundBody);
 
-// ------------------------
-// Bat: dynamic + hinge motor
-// ------------------------
-const pivotHeight = 1.0;
+// ------------------------------------------------------------
+// Bat: dynamic body constrained by hinge motor
+// ------------------------------------------------------------
 const batLength = 1.25;
 const batRadius = 0.065;
+const batPivot = new CANNON.Vec3(-0.28, 1.02, 0.34);
 
 const batPivotBody = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
-batPivotBody.position.set(-0.25, pivotHeight, 0.3);
+batPivotBody.position.copy(batPivot);
 world.addBody(batPivotBody);
 
 const batBody = new CANNON.Body({
@@ -104,37 +104,34 @@ const batBody = new CANNON.Body({
   angularDamping: 0.2
 });
 const batShape = new CANNON.Cylinder(batRadius, batRadius * 0.65, batLength, 12);
-const qAlign = new CANNON.Quaternion();
-qAlign.setFromEuler(0, 0, Math.PI / 2);
-batBody.addShape(batShape, new CANNON.Vec3(0, 0, 0), qAlign);
-batBody.position.set(-0.25 + batLength * 0.5, pivotHeight, 0.3);
-batBody.angularVelocity.set(0, 0, 0);
-batBody.sleepSpeedLimit = 0.05;
+const batShapeRot = new CANNON.Quaternion();
+batShapeRot.setFromEuler(0, 0, Math.PI / 2);
+batBody.addShape(batShape, new CANNON.Vec3(0, 0, 0), batShapeRot);
+batBody.position.set(batPivot.x + batLength * 0.5, batPivot.y, batPivot.z);
 batBody.allowSleep = false;
 world.addBody(batBody);
 
-// Hinge around Y axis from the knob/handle.
-const hinge = new CANNON.HingeConstraint(batPivotBody, batBody, {
+const batHinge = new CANNON.HingeConstraint(batPivotBody, batBody, {
   pivotA: new CANNON.Vec3(0, 0, 0),
   axisA: new CANNON.Vec3(0, 1, 0),
   pivotB: new CANNON.Vec3(-batLength * 0.5, 0, 0),
   axisB: new CANNON.Vec3(0, 1, 0),
   collideConnected: false
 });
-world.addConstraint(hinge);
-hinge.enableMotor();
-hinge.setMotorMaxForce(90);
+world.addConstraint(batHinge);
+batHinge.enableMotor();
+batHinge.setMotorMaxForce(95);
 
 const batMesh = new THREE.Mesh(
-  new THREE.CylinderGeometry(batRadius * 0.7, batRadius, batLength, 16),
-  new THREE.MeshStandardMaterial({ color: 0xc3905c, roughness: 0.45, metalness: 0.05 })
+  new THREE.CylinderGeometry(batRadius * 0.7, batRadius, batLength, 18),
+  new THREE.MeshStandardMaterial({ color: 0xc79564, roughness: 0.45, metalness: 0.02 })
 );
 batMesh.rotation.z = Math.PI / 2;
 scene.add(batMesh);
 
-// ------------------------
-// Ball
-// ------------------------
+// ------------------------------------------------------------
+// Ball setup
+// ------------------------------------------------------------
 const ballRadius = 0.12;
 const ballBody = new CANNON.Body({
   mass: 0.145,
@@ -152,184 +149,200 @@ const ballMesh = new THREE.Mesh(
 scene.add(ballMesh);
 
 const moundPos = new CANNON.Vec3(0, 1.05, -12);
-let pitchTimeout = null;
+let pitchTimer = null;
 let lastHitSpeed = 0;
-let bestDistance = 0;
-let wasContactingBat = false;
+let maxDistance = 0;
+let touchingBatPrev = false;
 
 const statsEl = document.getElementById('stats');
 
 function updateHud() {
-  statsEl.textContent = `Last hit: ${lastHitSpeed.toFixed(1)} m/s | Distance: ${bestDistance.toFixed(1)} m`;
+  statsEl.textContent = `Last hit: ${lastHitSpeed.toFixed(1)} m/s | Distance: ${maxDistance.toFixed(1)} m`;
 }
 
-function resetBallAndPitch(delay = config.pitchInterval) {
-  if (pitchTimeout) clearTimeout(pitchTimeout);
+function resetBallAndPitch(delayMs = config.pitchInterval) {
+  if (pitchTimer) clearTimeout(pitchTimer);
+
   ballBody.position.copy(moundPos);
   ballBody.velocity.setZero();
   ballBody.angularVelocity.setZero();
   ballBody.quaternion.set(0, 0, 0, 1);
+  maxDistance = 0;
 
-  pitchTimeout = setTimeout(() => {
-    // Slight randomness keeps pitches varied.
-    const lateral = (Math.random() - 0.5) * 1.0;
-    const vertical = (Math.random() - 0.5) * 0.4;
-    ballBody.velocity.set(lateral, vertical, config.pitchSpeed);
-    bestDistance = 0;
-  }, delay);
+  pitchTimer = setTimeout(() => {
+    const randomX = (Math.random() - 0.5) * 0.9;
+    const randomY = (Math.random() - 0.5) * 0.35;
+    ballBody.velocity.set(randomX, randomY, config.pitchSpeed);
+  }, delayMs);
 }
 
-resetBallAndPitch(450);
+resetBallAndPitch(500);
 
-// ------------------------
-// Input: click+drag bat control
-// ------------------------
+// ------------------------------------------------------------
+// Mouse controls for bat swing
+// ------------------------------------------------------------
 const raycaster = new THREE.Raycaster();
-const mouseNdc = new THREE.Vector2();
-let isDragging = false;
+const mouse = new THREE.Vector2();
+let grabbingBat = false;
 let lastMouseX = 0;
-let targetBatAngle = 0;
+let lastMouseY = 0;
+let targetYaw = 0;
+let targetTilt = 0;
 
-function setMouseNdc(clientX, clientY) {
-  mouseNdc.x = (clientX / window.innerWidth) * 2 - 1;
-  mouseNdc.y = -(clientY / window.innerHeight) * 2 + 1;
+function setMouseNDC(clientX, clientY) {
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 }
 
-window.addEventListener('mousedown', (e) => {
-  if (e.button !== 0) return;
-  setMouseNdc(e.clientX, e.clientY);
-  raycaster.setFromCamera(mouseNdc, camera);
-  const hit = raycaster.intersectObject(batMesh, false);
-  if (hit.length > 0) {
-    isDragging = true;
-    lastMouseX = e.clientX;
-    batMesh.material.color.set(0xff8a65);
+window.addEventListener('mousedown', (event) => {
+  if (event.button !== 0) return;
+
+  setMouseNDC(event.clientX, event.clientY);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(batMesh, false);
+  if (hits.length > 0) {
+    grabbingBat = true;
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
+    batMesh.material.color.set(0xff8f6a);
   }
 });
 
-window.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-  const dx = e.clientX - lastMouseX;
-  lastMouseX = e.clientX;
+window.addEventListener('mousemove', (event) => {
+  if (!grabbingBat) return;
 
-  targetBatAngle += dx * config.mouseSensitivity;
-  targetBatAngle = THREE.MathUtils.clamp(targetBatAngle, -0.25, config.maxBatAngle);
+  const dx = event.clientX - lastMouseX;
+  const dy = event.clientY - lastMouseY;
+  lastMouseX = event.clientX;
+  lastMouseY = event.clientY;
+
+  targetYaw += dx * config.mouseSensitivity;
+  targetYaw = THREE.MathUtils.clamp(targetYaw, -0.28, config.maxBatAngle);
+
+  targetTilt += -dy * config.tiltSensitivity;
+  targetTilt = THREE.MathUtils.clamp(targetTilt, -config.maxBatTilt, config.maxBatTilt);
 });
 
 window.addEventListener('mouseup', () => {
-  if (!isDragging) return;
-  isDragging = false;
-  batMesh.material.color.set(0xc3905c);
+  if (!grabbingBat) return;
+  grabbingBat = false;
+  batMesh.material.color.set(0xc79564);
 });
 
-window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'r') {
-    targetBatAngle = 0;
-    batBody.angularVelocity.setZero();
-    resetBallAndPitch(150);
-  }
+window.addEventListener('keydown', (event) => {
+  if (event.key.toLowerCase() !== 'r') return;
+  targetYaw = 0;
+  targetTilt = 0;
+  batBody.angularVelocity.setZero();
+  batBody.velocity.setZero();
+  resetBallAndPitch(200);
 });
 
-// ------------------------
-// Animation / simulation
-// ------------------------
-const clock = new THREE.Clock();
-let accumulator = 0;
-
-function getBatAngleAroundY() {
-  // Signed yaw from bat vector in XZ plane.
-  const forward = new CANNON.Vec3(1, 0, 0);
-  batBody.quaternion.vmult(forward, forward);
-  return Math.atan2(forward.z, forward.x);
+// ------------------------------------------------------------
+// Simulation helpers
+// ------------------------------------------------------------
+function getBatYaw() {
+  const axis = new CANNON.Vec3(1, 0, 0);
+  batBody.quaternion.vmult(axis, axis);
+  return Math.atan2(axis.z, axis.x);
 }
 
-function driveBatMotor() {
-  const angle = getBatAngleAroundY();
+function driveBat() {
+  const currentYaw = getBatYaw();
 
-  // Return-to-rest spring when released.
-  if (!isDragging) {
-    targetBatAngle *= config.batDamping;
-    if (Math.abs(targetBatAngle) < 0.002) targetBatAngle = 0;
+  // On release, move target back to neutral with damping.
+  if (!grabbingBat) {
+    targetYaw *= config.batDamping;
+    targetTilt *= config.batDamping;
+    if (Math.abs(targetYaw) < 0.002) targetYaw = 0;
+    if (Math.abs(targetTilt) < 0.002) targetTilt = 0;
   }
 
-  const error = THREE.MathUtils.clamp(targetBatAngle - angle, -1.2, 1.2);
-  const desiredSpeed = THREE.MathUtils.clamp(error * config.batMotorStrength, -30, 30);
+  const yawError = THREE.MathUtils.clamp(targetYaw - currentYaw, -1.2, 1.2);
+  const motorSpeed = THREE.MathUtils.clamp(yawError * config.batMotorStrength, -30, 30);
 
-  hinge.enableMotor();
-  hinge.setMotorSpeed(desiredSpeed);
-  hinge.setMotorMaxForce(90);
+  batHinge.enableMotor();
+  batHinge.setMotorSpeed(motorSpeed);
+  batHinge.setMotorMaxForce(95);
 
-  // Safety cap against unstable spinning.
-  batBody.angularVelocity.x = THREE.MathUtils.clamp(batBody.angularVelocity.x, -25, 25);
+  // Optional extra tilt response around bat local Z (torque-based).
+  const batUp = new CANNON.Vec3(0, 0, 1);
+  batBody.quaternion.vmult(batUp, batUp);
+  const tiltError = targetTilt - batUp.y * 0.5;
+  const tiltTorque = THREE.MathUtils.clamp(tiltError * 18, -10, 10);
+  batBody.torque.x += tiltTorque;
+
+  // Safety caps to reduce instability/explosions.
+  batBody.angularVelocity.x = THREE.MathUtils.clamp(batBody.angularVelocity.x, -24, 24);
   batBody.angularVelocity.y = THREE.MathUtils.clamp(batBody.angularVelocity.y, -35, 35);
-  batBody.angularVelocity.z = THREE.MathUtils.clamp(batBody.angularVelocity.z, -25, 25);
+  batBody.angularVelocity.z = THREE.MathUtils.clamp(batBody.angularVelocity.z, -24, 24);
 }
 
-function checkHitAndStats() {
-  const contacts = world.contacts;
-  let contactingBat = false;
-  for (let i = 0; i < contacts.length; i++) {
-    const c = contacts[i];
-    const batBall =
+function trackContactStats() {
+  let touchingBatNow = false;
+  for (let i = 0; i < world.contacts.length; i++) {
+    const c = world.contacts[i];
+    const batBallPair =
       (c.bi === batBody && c.bj === ballBody) ||
       (c.bi === ballBody && c.bj === batBody);
-    if (batBall) {
-      contactingBat = true;
+    if (batBallPair) {
+      touchingBatNow = true;
       break;
     }
   }
 
-  // Detect first frame of impact.
-  if (contactingBat && !wasContactingBat) {
+  if (touchingBatNow && !touchingBatPrev) {
     lastHitSpeed = ballBody.velocity.length();
   }
-  wasContactingBat = contactingBat;
+  touchingBatPrev = touchingBatNow;
 
-  // Approximate hit travel distance from plate in XZ.
-  const dx = ballBody.position.x - plateMesh.position.x;
-  const dz = ballBody.position.z - plateMesh.position.z;
-  bestDistance = Math.max(bestDistance, Math.sqrt(dx * dx + dz * dz));
+  const dx = ballBody.position.x - homePlateMesh.position.x;
+  const dz = ballBody.position.z - homePlateMesh.position.z;
+  maxDistance = Math.max(maxDistance, Math.sqrt(dx * dx + dz * dz));
 
   updateHud();
 }
 
-function shouldResetBall() {
+function ballNeedsReset() {
   return (
     ballBody.position.z > 14 ||
     Math.abs(ballBody.position.x) > 22 ||
-    Math.abs(ballBody.position.z) > 30 ||
+    Math.abs(ballBody.position.z) > 32 ||
     ballBody.position.y < -5
   );
 }
 
-function animate() {
-  requestAnimationFrame(animate);
+// ------------------------------------------------------------
+// Main loop with accumulator + fixed step
+// ------------------------------------------------------------
+const clock = new THREE.Clock();
+let accumulator = 0;
+
+function frame() {
+  requestAnimationFrame(frame);
 
   const dt = Math.min(clock.getDelta(), 0.05);
   accumulator += dt;
 
   while (accumulator >= fixedDt) {
-    driveBatMotor();
+    driveBat();
     world.step(fixedDt, dt, maxSubSteps);
     accumulator -= fixedDt;
   }
 
-  if (shouldResetBall()) {
-    resetBallAndPitch(config.pitchInterval);
-  }
+  if (ballNeedsReset()) resetBallAndPitch(config.pitchInterval);
 
-  checkHitAndStats();
+  trackContactStats();
 
   batMesh.position.copy(batBody.position);
   batMesh.quaternion.copy(batBody.quaternion);
-
   ballMesh.position.copy(ballBody.position);
   ballMesh.quaternion.copy(ballBody.quaternion);
 
   renderer.render(scene, camera);
 }
 
-animate();
+frame();
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
