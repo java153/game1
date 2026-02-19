@@ -118,7 +118,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-renderer.domElement.style.cursor = 'crosshair';
+renderer.domElement.style.cursor = 'none';
 
 scene.add(new THREE.HemisphereLight(0xecf5ff, 0x2d4354, 0.98));
 const sun = new THREE.DirectionalLight(0xffffff, 1.12);
@@ -129,8 +129,8 @@ const skyGeo = new THREE.SphereGeometry(300, 36, 22);
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide,
   uniforms: {
-    topColor: { value: new THREE.Color(0x80b5f0) },
-    bottomColor: { value: new THREE.Color(0xf5f9ff) },
+    topColor: { value: new THREE.Color(0x4f86cd) },
+    bottomColor: { value: new THREE.Color(0xb9dbff) },
     offset: { value: 12.0 },
     exponent: { value: 0.85 }
   },
@@ -160,20 +160,57 @@ scene.add(new THREE.Mesh(skyGeo, skyMat));
 // ------------------------------------------------------------
 // STADIUM ENVIRONMENT
 // ------------------------------------------------------------
+const HOME_PLATE = new THREE.Vector3(0, 0, 0);
+const BASE_PATH = 6.5;
+const OUTFIELD_RADIUS = 54;
+
 const field = new THREE.Mesh(
-  new THREE.PlaneGeometry(240, 240),
+  new THREE.PlaneGeometry(260, 260),
   new THREE.MeshStandardMaterial({ color: 0x2e8f46, roughness: 0.95 })
 );
 field.rotation.x = -Math.PI / 2;
 scene.add(field);
 
-const infieldDirt = new THREE.Mesh(
-  new THREE.CircleGeometry(6, 64),
+// Infield dirt around home and base paths (diamond feel)
+const infieldCircle = new THREE.Mesh(
+  new THREE.CircleGeometry(12.2, 80),
   new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
 );
-infieldDirt.rotation.x = -Math.PI / 2;
-infieldDirt.position.y = 0.01;
-scene.add(infieldDirt);
+infieldCircle.rotation.x = -Math.PI / 2;
+infieldCircle.position.y = 0.01;
+scene.add(infieldCircle);
+
+const basePathLineA = new THREE.Mesh(
+  new THREE.BoxGeometry(0.75, 0.02, BASE_PATH * 2.95),
+  new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
+);
+basePathLineA.position.set(BASE_PATH * 0.5, 0.02, -BASE_PATH * 0.5);
+basePathLineA.rotation.y = Math.PI / 4;
+scene.add(basePathLineA);
+
+const basePathLineB = new THREE.Mesh(
+  new THREE.BoxGeometry(0.75, 0.02, BASE_PATH * 2.95),
+  new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
+);
+basePathLineB.position.set(-BASE_PATH * 0.5, 0.02, -BASE_PATH * 0.5);
+basePathLineB.rotation.y = -Math.PI / 4;
+scene.add(basePathLineB);
+
+const basePathLineC = new THREE.Mesh(
+  new THREE.BoxGeometry(0.75, 0.02, BASE_PATH * 2.95),
+  new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
+);
+basePathLineC.position.set(BASE_PATH * 0.5, 0.02, -BASE_PATH * 1.5);
+basePathLineC.rotation.y = -Math.PI / 4;
+scene.add(basePathLineC);
+
+const basePathLineD = new THREE.Mesh(
+  new THREE.BoxGeometry(0.75, 0.02, BASE_PATH * 2.95),
+  new THREE.MeshStandardMaterial({ color: 0x8f7145, roughness: 0.9 })
+);
+basePathLineD.position.set(-BASE_PATH * 0.5, 0.02, -BASE_PATH * 1.5);
+basePathLineD.rotation.y = Math.PI / 4;
+scene.add(basePathLineD);
 
 const mound = new THREE.Mesh(
   new THREE.CylinderGeometry(1.4, 1.6, 0.16, 30),
@@ -183,10 +220,11 @@ mound.position.set(0, 0.08, -17.5);
 scene.add(mound);
 
 const plate = new THREE.Mesh(
-  new THREE.BoxGeometry(0.62, 0.04, 0.62),
-  new THREE.MeshStandardMaterial({ color: 0xffffff })
+  new THREE.CylinderGeometry(0.42, 0.5, 0.04, 6),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65 })
 );
-plate.position.set(0, 0.02, 0);
+plate.position.set(HOME_PLATE.x, 0.02, HOME_PLATE.z);
+plate.rotation.y = Math.PI / 6;
 scene.add(plate);
 
 function addBase(x, z) {
@@ -197,18 +235,18 @@ function addBase(x, z) {
   base.position.set(x, 0.04, z);
   scene.add(base);
 }
-addBase(6.5, -6.5);
-addBase(-6.5, -6.5);
-addBase(0, -13);
+addBase(BASE_PATH, -BASE_PATH); // 1B
+addBase(-BASE_PATH, -BASE_PATH); // 3B
+addBase(0, -BASE_PATH * 2); // 2B
 
 const foulLineMat = new THREE.MeshBasicMaterial({ color: 0xf4f4f4 });
-const foulLineA = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 92), foulLineMat);
-foulLineA.position.set(32.6, 0.015, -32.6);
+const foulLineA = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 95), foulLineMat);
+foulLineA.position.set(33.6, 0.015, -33.6);
 foulLineA.rotation.y = Math.PI / 4;
 scene.add(foulLineA);
 
-const foulLineB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 92), foulLineMat);
-foulLineB.position.set(-32.6, 0.015, -32.6);
+const foulLineB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 95), foulLineMat);
+foulLineB.position.set(-33.6, 0.015, -33.6);
 foulLineB.rotation.y = -Math.PI / 4;
 scene.add(foulLineB);
 
@@ -227,14 +265,14 @@ backstopNet.position.set(0, 3.95, 3.5);
 scene.add(backstopNet);
 
 const outfieldWall = new THREE.Mesh(
-  new THREE.CylinderGeometry(52, 52, 4.4, 96, 1, true),
+  new THREE.CylinderGeometry(OUTFIELD_RADIUS, OUTFIELD_RADIUS, 4.8, 120, 1, true),
   new THREE.MeshStandardMaterial({ color: 0x1f4766, roughness: 0.82, side: THREE.DoubleSide })
 );
-outfieldWall.position.set(0, 2.2, -22);
+outfieldWall.position.set(0, 2.4, -22);
 scene.add(outfieldWall);
 
 const warningTrack = new THREE.Mesh(
-  new THREE.RingGeometry(46.5, 52, 120),
+  new THREE.RingGeometry(OUTFIELD_RADIUS - 5.5, OUTFIELD_RADIUS, 150),
   new THREE.MeshStandardMaterial({ color: 0x8b6e46, roughness: 0.9, side: THREE.DoubleSide })
 );
 warningTrack.rotation.x = -Math.PI / 2;
@@ -249,9 +287,9 @@ const seatMats = [
 ];
 for (let tier = 0; tier < 4; tier++) {
   for (let row = 0; row < 6; row++) {
-    const radius = 16 + tier * 11 + row * 2.0;
+    const radius = 18 + tier * 11 + row * 2.0;
     const y = 1.0 + tier * 2.0 + row * 0.6;
-    const steps = 58 + tier * 6 + row * 2;
+    const steps = 64 + tier * 6 + row * 2;
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
       const a = THREE.MathUtils.lerp(0, Math.PI * 2, t);
@@ -372,15 +410,28 @@ zoneEdges.position.copy(strikeZone.center);
 scene.add(zoneEdges);
 
 const pciGroup = new THREE.Group();
-const pciRing = new THREE.Mesh(
-  new THREE.RingGeometry(activeConfig.pciRadius * 0.82, activeConfig.pciRadius, 36),
+const pciWedge = new THREE.Mesh(
+  new THREE.TorusGeometry(activeConfig.pciRadius * 1.42, activeConfig.pciRadius * 0.3, 18, 40, Math.PI * 1.35),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
 );
+pciWedge.rotation.z = Math.PI * 0.82;
+
+const wedgeCapLeft = new THREE.Mesh(
+  new THREE.CircleGeometry(activeConfig.pciRadius * 0.26, 16),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
+);
+const wedgeCapRight = wedgeCapLeft.clone();
+const capR = activeConfig.pciRadius * 1.42;
+const capA0 = Math.PI * 0.82;
+const capA1 = capA0 + Math.PI * 1.35;
+wedgeCapLeft.position.set(Math.cos(capA0) * capR, Math.sin(capA0) * capR, 0);
+wedgeCapRight.position.set(Math.cos(capA1) * capR, Math.sin(capA1) * capR, 0);
+
 const pciDot = new THREE.Mesh(
-  new THREE.CircleGeometry(0.03, 20),
+  new THREE.CircleGeometry(0.04, 20),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
 );
-pciGroup.add(pciRing, pciDot);
+pciGroup.add(pciWedge, wedgeCapLeft, wedgeCapRight, pciDot);
 scene.add(pciGroup);
 
 const pciPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(strikeZone.center.z + strikeZone.depth * 0.55));
@@ -700,18 +751,37 @@ function drawMinimap() {
   mapCtx.fillStyle = '#113024';
   mapCtx.fillRect(0, 0, w, h);
 
+  const homeX = w * 0.5;
+  const homeY = h - 10;
+  const mapScale = 2.0;
+
+  // Outfield fence arc
   mapCtx.strokeStyle = '#7ad090';
   mapCtx.lineWidth = 2;
   mapCtx.beginPath();
-  mapCtx.arc(w / 2, h - 6, Math.min(w * 0.45, h * 0.85), Math.PI * 1.08, Math.PI * 1.92);
+  mapCtx.arc(homeX, homeY, OUTFIELD_RADIUS / mapScale, Math.PI * 1.22, Math.PI * 1.78);
   mapCtx.stroke();
 
+  // Foul lines
   mapCtx.strokeStyle = '#d8e4f5';
   mapCtx.beginPath();
-  mapCtx.moveTo(w / 2, h - 6);
-  mapCtx.lineTo(8, 18);
-  mapCtx.moveTo(w / 2, h - 6);
-  mapCtx.lineTo(w - 8, 18);
+  mapCtx.moveTo(homeX, homeY);
+  mapCtx.lineTo(homeX + 34, homeY - 34);
+  mapCtx.moveTo(homeX, homeY);
+  mapCtx.lineTo(homeX - 34, homeY - 34);
+  mapCtx.stroke();
+
+  // Infield diamond
+  const first = { x: homeX + BASE_PATH / mapScale, y: homeY - BASE_PATH / mapScale };
+  const second = { x: homeX, y: homeY - (BASE_PATH * 2) / mapScale };
+  const third = { x: homeX - BASE_PATH / mapScale, y: homeY - BASE_PATH / mapScale };
+  mapCtx.strokeStyle = '#b8c8d8';
+  mapCtx.beginPath();
+  mapCtx.moveTo(homeX, homeY);
+  mapCtx.lineTo(first.x, first.y);
+  mapCtx.lineTo(second.x, second.y);
+  mapCtx.lineTo(third.x, third.y);
+  mapCtx.closePath();
   mapCtx.stroke();
 
   mapCtx.fillStyle = '#e74c3c';
@@ -753,9 +823,9 @@ function registerOut() {
 
 function addMinimapLanding(worldX, worldZ) {
   if (!mapCtx || !minimapCanvas) return;
-  const mapScale = 1.55;
-  const mx = minimapCanvas.width * 0.5 + worldX * mapScale;
-  const my = minimapCanvas.height - 6 + worldZ * mapScale;
+  const mapScale = 2.0;
+  const mx = minimapCanvas.width * 0.5 + worldX / mapScale;
+  const my = minimapCanvas.height - 10 + worldZ / mapScale;
   minimapDots.push({ x: THREE.MathUtils.clamp(mx, 5, minimapCanvas.width - 5), y: THREE.MathUtils.clamp(my, 5, minimapCanvas.height - 5) });
   if (minimapDots.length > 12) minimapDots.shift();
   drawMinimap();
@@ -1018,7 +1088,9 @@ function updatePciColor() {
   let color = 0xffffff;
   if (d <= activeConfig.goodPciDist) color = 0xffe066;
   if (d <= activeConfig.perfectPciDist) color = 0x60ff75;
-  pciRing.material.color.setHex(color);
+  pciWedge.material.color.setHex(color);
+  wedgeCapLeft.material.color.setHex(color);
+  wedgeCapRight.material.color.setHex(color);
   pciDot.material.color.setHex(color);
 }
 
