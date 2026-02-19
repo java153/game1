@@ -129,8 +129,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   420
 );
-camera.position.set(0, 1.72, 1.35);
-camera.lookAt(0, 1.2, -8.8);
+camera.position.set(0, 1.68, 1.9);
+camera.lookAt(0, 1.35, -2.8);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -175,6 +175,22 @@ const skyMat = new THREE.ShaderMaterial({
   `
 });
 scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+function addCloud(cx, cy, cz) {
+  const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, transparent: true, opacity: 0.92 });
+  const cloud = new THREE.Group();
+  for (let i = 0; i < 5; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.9 + (i % 2) * 0.35, 12, 10), cloudMat);
+    puff.position.set((i - 2) * 0.7, (i % 2) * 0.18, (Math.random() - 0.5) * 0.5);
+    cloud.add(puff);
+  }
+  cloud.position.set(cx, cy, cz);
+  scene.add(cloud);
+}
+
+addCloud(-18, 13, -30);
+addCloud(22, 12, -36);
+addCloud(8, 14, -52);
 
 // ------------------------------------------------------------
 // STADIUM ENVIRONMENT
@@ -409,6 +425,20 @@ function addSimplePlayer(x, z, facing = 0, shirt = 0xeeeeee, pants = 0x4c5e7b) {
   torso.position.set(0, 0.95, 0);
   g.add(torso);
 
+  const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.42, 10), skinMat);
+  leftArm.position.set(-0.26, 1.0, 0);
+  leftArm.rotation.z = Math.PI * 0.1;
+  g.add(leftArm);
+
+  const rightArm = leftArm.clone();
+  rightArm.position.x = 0.26;
+  rightArm.rotation.z = -Math.PI * 0.1;
+  g.add(rightArm);
+
+  const glove = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color: 0x3a2516, roughness: 0.8 }));
+  glove.position.set(0.34, 0.95, 0.02);
+  g.add(glove);
+
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
   head.position.set(0, 1.45, 0);
   g.add(head);
@@ -430,7 +460,8 @@ addSimplePlayer(0, -BASE_PATH * 2.55, Math.PI, 0xdfe6f4, 0x4a5b73); // CF
 // ------------------------------------------------------------
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
-const STRIKE_ZONE_CENTER_Y = 1.14;
+const STRIKE_ZONE_CENTER_Y = 1.35;
+const STRIKE_ZONE_CENTER_Z = -2.8;
 
 const strikeZone = {
   center: new THREE.Vector3(),
@@ -479,30 +510,30 @@ function rebuildPciGeometry() {
     m.geometry.dispose();
   }
 
-  outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 3.2, activeConfig.pciRadius * 2.86, 30, 1, Math.PI * 0.61, Math.PI * 0.9), wedgeMat.clone());
-  outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 3.2, activeConfig.pciRadius * 2.86, 30, 1, Math.PI * 1.49, Math.PI * 0.9), wedgeMat.clone());
-  innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.65, activeConfig.pciRadius * 1.38, 24, 1, Math.PI * 0.73, Math.PI * 0.62), wedgeMat.clone());
-  innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.65, activeConfig.pciRadius * 1.38, 24, 1, Math.PI * 1.79, Math.PI * 0.62), wedgeMat.clone());
+  outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.25, activeConfig.pciRadius * 1.98, 30, 1, Math.PI * 0.62, Math.PI * 0.86), wedgeMat.clone());
+  outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.25, activeConfig.pciRadius * 1.98, 30, 1, Math.PI * 1.52, Math.PI * 0.86), wedgeMat.clone());
+  innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.32, activeConfig.pciRadius * 1.12, 24, 1, Math.PI * 0.72, Math.PI * 0.58), wedgeMat.clone());
+  innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.32, activeConfig.pciRadius * 1.12, 24, 1, Math.PI * 1.84, Math.PI * 0.58), wedgeMat.clone());
 
   pciDot = new THREE.Mesh(
-    new THREE.BoxGeometry(0.068, 0.068, 0.002),
+    new THREE.BoxGeometry(0.058, 0.058, 0.002),
     new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
   );
   pciDot.rotation.z = Math.PI / 4;
 
   pciDot2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.046, 0.046, 0.002),
+    new THREE.BoxGeometry(0.04, 0.04, 0.002),
     new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
   );
   pciDot2.rotation.z = Math.PI / 4;
-  pciDot2.position.y = -0.12;
+  pciDot2.position.y = -0.1;
 
   pciDot3 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.028, 0.028, 0.002),
+    new THREE.BoxGeometry(0.024, 0.024, 0.002),
     new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
   );
   pciDot3.rotation.z = Math.PI / 4;
-  pciDot3.position.y = -0.205;
+  pciDot3.position.y = -0.165;
 
   pciGroup.add(outerLeft, outerRight, innerLeft, innerRight, pciDot, pciDot2, pciDot3);
 }
@@ -521,7 +552,7 @@ function applyStrikeZoneAndPciConfig() {
   strikeZone.height = activeConfig.strikeZoneHeight;
   strikeZone.depth = activeConfig.strikeZoneDepth;
 
-  strikeZone.center.set(0, STRIKE_ZONE_CENTER_Y, camera.position.z - activeConfig.strikeZoneDistance);
+  strikeZone.center.set(0, STRIKE_ZONE_CENTER_Y, STRIKE_ZONE_CENTER_Z);
 
   zoneFill.geometry.dispose();
   zoneFill.geometry = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
@@ -840,8 +871,10 @@ function drawMinimap() {
   const h = minimapCanvas.height;
   mapCtx.clearRect(0, 0, w, h);
 
-  mapCtx.fillStyle = '#113024';
+  mapCtx.fillStyle = '#0f2e22';
   mapCtx.fillRect(0, 0, w, h);
+
+  mapCtx.fillStyle = '#7a5c3a';
 
   const homeX = w * 0.5;
   const homeY = h - 10;
@@ -881,6 +914,14 @@ function drawMinimap() {
   const third = { x: homeX - BASE_PATH / mapScale, y: homeY - BASE_PATH / mapScale };
   mapCtx.strokeStyle = '#b8c8d8';
   mapCtx.beginPath();
+  mapCtx.moveTo(homeX, homeY - 1);
+  mapCtx.lineTo(first.x, first.y);
+  mapCtx.lineTo(second.x, second.y);
+  mapCtx.lineTo(third.x, third.y);
+  mapCtx.closePath();
+  mapCtx.fillStyle = 'rgba(140, 102, 66, 0.45)';
+  mapCtx.fill();
+  mapCtx.beginPath();
   mapCtx.moveTo(homeX, homeY);
   mapCtx.lineTo(first.x, first.y);
   mapCtx.lineTo(second.x, second.y);
@@ -897,8 +938,11 @@ function drawMinimap() {
   mapCtx.fillStyle = '#e74c3c';
   for (const dot of minimapDots) {
     mapCtx.beginPath();
-    mapCtx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
+    mapCtx.arc(dot.x, dot.y, 3.6, 0, Math.PI * 2);
     mapCtx.fill();
+    mapCtx.strokeStyle = '#fff1f1';
+    mapCtx.lineWidth = 1;
+    mapCtx.stroke();
   }
 }
 
