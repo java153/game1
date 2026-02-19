@@ -4,7 +4,7 @@ import * as CANNON from 'cannon-es';
 // ------------------------------------------------------------
 // TUNING VARIABLES
 // ------------------------------------------------------------
-const config = {
+const baseConfig = {
   cameraFov: 82,
 
   strikeZoneDistance: 1.2,
@@ -45,6 +45,62 @@ const config = {
   friction: 0.33
 };
 
+const difficultyProfiles = {
+  easy: {
+    name: 'EASY',
+    pitchSpeedMin: 15,
+    pitchSpeedMax: 20,
+    breakX: 0.9,
+    breakY: 0.55,
+    swingDurationMs: 245,
+    swingCooldownMs: 520,
+    postSwingDelayMinMs: 2200,
+    postSwingDelayMaxMs: 2800,
+    swingWindowZ: 1.25,
+    hitPlaneTolerance: 1.0,
+    perfectPciDist: 0.5,
+    goodPciDist: 0.88,
+    perfectBatDist: 0.48,
+    goodBatDist: 0.92,
+    perfectTiming: 0.36,
+    goodTiming: 0.76
+  },
+  normal: {
+    name: 'NORMAL'
+  },
+  hard: {
+    name: 'HARD',
+    pitchSpeedMin: 30,
+    pitchSpeedMax: 38,
+    breakX: 2.3,
+    breakY: 1.6,
+    swingDurationMs: 180,
+    swingCooldownMs: 320,
+    postSwingDelayMinMs: 1200,
+    postSwingDelayMaxMs: 1800,
+    swingWindowZ: 0.82,
+    hitPlaneTolerance: 0.58,
+    perfectPciDist: 0.24,
+    goodPciDist: 0.52,
+    perfectBatDist: 0.24,
+    goodBatDist: 0.54,
+    perfectTiming: 0.16,
+    goodTiming: 0.35
+  }
+};
+
+let currentDifficulty = 'easy';
+let activeConfig = { ...baseConfig, ...difficultyProfiles[currentDifficulty] };
+
+function setDifficulty(mode) {
+  if (!difficultyProfiles[mode]) return;
+  currentDifficulty = mode;
+  activeConfig = { ...baseConfig, ...difficultyProfiles[currentDifficulty] };
+  if (difficultyEl) {
+    difficultyEl.value = mode;
+  }
+}
+
 const fixedDt = 1 / 120;
 const maxSubSteps = 5;
 
@@ -54,7 +110,7 @@ const maxSubSteps = 5;
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-  config.cameraFov,
+  activeConfig.cameraFov,
   window.innerWidth / window.innerHeight,
   0.1,
   350
@@ -179,10 +235,10 @@ for (let tier = 0; tier < 3; tier++) {
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
 const strikeZone = {
-  center: new THREE.Vector3(0, 1.28, camera.position.z - config.strikeZoneDistance),
-  width: config.strikeZoneWidth,
-  height: config.strikeZoneHeight,
-  depth: config.strikeZoneDepth
+  center: new THREE.Vector3(0, 1.28, camera.position.z - activeConfig.strikeZoneDistance),
+  width: activeConfig.strikeZoneWidth,
+  height: activeConfig.strikeZoneHeight,
+  depth: activeConfig.strikeZoneDepth
 };
 
 const zoneGeo = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
@@ -202,7 +258,7 @@ scene.add(zoneEdges);
 
 const pciGroup = new THREE.Group();
 const pciRing = new THREE.Mesh(
-  new THREE.RingGeometry(config.pciRadius * 0.82, config.pciRadius, 36),
+  new THREE.RingGeometry(activeConfig.pciRadius * 0.82, activeConfig.pciRadius, 36),
   new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 })
 );
 const pciDot = new THREE.Mesh(
@@ -275,7 +331,7 @@ function smoothstep(t) {
 function updateBatSwing(nowMs) {
   if (!isSwinging) return;
 
-  const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / config.swingDurationMs, 0, 1);
+  const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / activeConfig.swingDurationMs, 0, 1);
 
   if (t < 0.22) {
     const a = smoothstep(t / 0.22);
@@ -311,7 +367,7 @@ function updateBatSwing(nowMs) {
     batPivot.position.lerpVectors(batFollowPos, batIdlePos, a);
   }
 
-  const inContactPhase = t >= config.contactWindowStart && t <= config.contactWindowEnd;
+  const inContactPhase = t >= activeConfig.contactWindowStart && t <= activeConfig.contactWindowEnd;
   if (inContactPhase && !swingContactResolved) {
     tryResolveContact();
   }
@@ -343,8 +399,8 @@ const ballMaterial = new CANNON.Material('ball');
 const groundMaterial = new CANNON.Material('ground');
 world.addContactMaterial(
   new CANNON.ContactMaterial(ballMaterial, groundMaterial, {
-    restitution: config.restitution,
-    friction: config.friction
+    restitution: activeConfig.restitution,
+    friction: activeConfig.friction
   })
 );
 
@@ -463,11 +519,23 @@ function playHitSound(strong = false) {
 // ------------------------------------------------------------
 const statusEl = document.getElementById('status');
 const detailsEl = document.getElementById('details');
+const difficultyEl = document.getElementById('difficulty');
+
+if (difficultyEl) {
+  difficultyEl.value = currentDifficulty;
+  difficultyEl.addEventListener('change', (event) => {
+    setDifficulty(event.target.value);
+    showResult(`Difficulty: ${activeConfig.name}`);
+    scheduleNextPitch();
+  });
+}
+
 let hudTimer = null;
 
 function showResult(text, mph = null) {
   statusEl.textContent = text;
-  detailsEl.textContent = mph == null ? '' : `Exit velocity: ${mph.toFixed(1)} mph`;
+  const evText = mph == null ? '' : `Exit velocity: ${mph.toFixed(1)} mph`;
+  detailsEl.textContent = `${evText}${evText ? ' • ' : ''}${activeConfig.name}`;
 
   if (hudTimer) clearTimeout(hudTimer);
   hudTimer = setTimeout(() => {
@@ -490,10 +558,10 @@ function randomPitchVelocity() {
   const tz = strikeZone.center.z;
 
   const toTarget = new THREE.Vector3(tx - spawnPos.x, ty - spawnPos.y, tz - spawnPos.z).normalize();
-  let speed = THREE.MathUtils.lerp(config.pitchSpeedMin, config.pitchSpeedMax, Math.random());
+  let speed = THREE.MathUtils.lerp(activeConfig.pitchSpeedMin, activeConfig.pitchSpeedMax, Math.random());
 
-  let breakX = (Math.random() - 0.5) * config.breakX;
-  let breakY = (Math.random() - 0.5) * config.breakY;
+  let breakX = (Math.random() - 0.5) * activeConfig.breakX;
+  let breakY = (Math.random() - 0.5) * activeConfig.breakY;
 
   if (pitchType === 'FASTBALL') {
     speed += 1.6;
@@ -530,7 +598,7 @@ function launchPitch() {
 
 function scheduleNextPitch() {
   queueBallAtMound();
-  const delay = THREE.MathUtils.lerp(config.postSwingDelayMinMs, config.postSwingDelayMaxMs, Math.random());
+  const delay = THREE.MathUtils.lerp(activeConfig.postSwingDelayMinMs, activeConfig.postSwingDelayMaxMs, Math.random());
   nextPitchReadyAt = performance.now() + delay;
 }
 
@@ -540,8 +608,8 @@ scheduleNextPitch();
 // INPUT
 // ------------------------------------------------------------
 window.addEventListener('mousemove', (e) => {
-  pciOffsetX += e.movementX * config.pciSensitivity;
-  pciOffsetY -= e.movementY * config.pciSensitivity;
+  pciOffsetX += e.movementX * activeConfig.pciSensitivity;
+  pciOffsetY -= e.movementY * activeConfig.pciSensitivity;
 
   const halfW = strikeZone.width * 0.5;
   const halfH = strikeZone.height * 0.5;
@@ -571,7 +639,7 @@ window.addEventListener('keydown', (e) => {
 
   isSwinging = true;
   swingStartMs = now;
-  nextSwingAllowedMs = now + config.swingCooldownMs;
+  nextSwingAllowedMs = now + activeConfig.swingCooldownMs;
   swingUsedThisPitch = true;
   swingContactResolved = false;
   swingMissQueued = true;
@@ -588,15 +656,15 @@ function pciBallDistance() {
 
 function classifyContact(pciDist, timingDist, batDist) {
   const perfect =
-    pciDist <= config.perfectPciDist &&
-    timingDist <= config.perfectTiming &&
-    batDist <= config.perfectBatDist;
+    pciDist <= activeConfig.perfectPciDist &&
+    timingDist <= activeConfig.perfectTiming &&
+    batDist <= activeConfig.perfectBatDist;
   if (perfect) return 'PERFECT';
 
   const good =
-    pciDist <= config.goodPciDist &&
-    timingDist <= config.goodTiming &&
-    batDist <= config.goodBatDist;
+    pciDist <= activeConfig.goodPciDist &&
+    timingDist <= activeConfig.goodTiming &&
+    batDist <= activeConfig.goodBatDist;
   if (good) return 'GOOD';
 
   return 'WEAK';
@@ -604,16 +672,16 @@ function classifyContact(pciDist, timingDist, batDist) {
 
 function tryResolveContact() {
   const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  if (timingDist > config.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.55) {
+  if (timingDist > activeConfig.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.55) {
     return;
   }
 
   const pciDist = pciBallDistance();
-  if (pciDist > config.goodPciDist * 2.0) return;
+  if (pciDist > activeConfig.goodPciDist * 2.0) return;
 
   const sweetSpot = getBatSweetSpotWorld();
   const batDist = sweetSpot.distanceTo(ballMesh.position);
-  if (batDist > config.goodBatDist * 1.95) return;
+  if (batDist > activeConfig.goodBatDist * 1.95) return;
 
   swingContactResolved = true;
   swingMissQueued = false;
@@ -622,11 +690,11 @@ function tryResolveContact() {
 
   const xInfluence = THREE.MathUtils.clamp(pciOffsetX / (strikeZone.width * 0.5), -1, 1);
   const yInfluence = THREE.MathUtils.clamp(pciOffsetY / (strikeZone.height * 0.5), -1, 1);
-  const timingScale = 1 - THREE.MathUtils.clamp(timingDist / config.hitPlaneTolerance, 0, 1);
+  const timingScale = 1 - THREE.MathUtils.clamp(timingDist / activeConfig.hitPlaneTolerance, 0, 1);
 
-  let impulseMag = config.weakImpulse;
-  if (quality === 'GOOD') impulseMag = config.goodImpulse;
-  if (quality === 'PERFECT') impulseMag = config.perfectImpulse;
+  let impulseMag = activeConfig.weakImpulse;
+  if (quality === 'GOOD') impulseMag = activeConfig.goodImpulse;
+  if (quality === 'PERFECT') impulseMag = activeConfig.perfectImpulse;
 
   const hitDir = new CANNON.Vec3(
     xInfluence * 0.78,
@@ -669,8 +737,8 @@ function shouldResetBallOutOfPlay() {
 function updatePciColor() {
   const d = pciBallDistance();
   let color = 0xffffff;
-  if (d <= config.goodPciDist) color = 0xffe066;
-  if (d <= config.perfectPciDist) color = 0x60ff75;
+  if (d <= activeConfig.goodPciDist) color = 0xffe066;
+  if (d <= activeConfig.perfectPciDist) color = 0x60ff75;
   pciRing.material.color.setHex(color);
   pciDot.material.color.setHex(color);
 }

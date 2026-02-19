@@ -61,6 +61,7 @@ This repo includes `.github/workflows/deploy-pages.yml` which builds and deploys
 - **Move mouse** to position PCI in the strike zone.
 - **Spacebar** to swing.
 - **R** to reset pitch + PCI.
+- **Difficulty selector (HUD):** Easy / Normal / Hard.
 
 ## Notes
 
