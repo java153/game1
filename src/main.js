@@ -5,7 +5,7 @@ import * as CANNON from 'cannon-es';
 // TUNING VARIABLES
 // ------------------------------------------------------------
 const baseConfig = {
-  cameraFov: 90,
+  cameraFov: 64,
 
   strikeZoneDistance: 1.28,
   strikeZoneWidth: 1.32,
@@ -129,8 +129,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   420
 );
-camera.position.set(0, 1.68, 1.9);
-camera.lookAt(0, 1.35, -2.8);
+camera.position.set(0, 1.64, 1.15);
+camera.lookAt(0, 1.15, -1.35);
 scene.add(camera);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -273,6 +273,33 @@ const plate = new THREE.Mesh(
 plate.position.set(HOME_PLATE.x, 0.02, HOME_PLATE.z);
 plate.rotation.y = Math.PI / 6;
 scene.add(plate);
+
+const batterBoxDirt = new THREE.Mesh(
+  new THREE.PlaneGeometry(8.5, 5.8),
+  new THREE.MeshStandardMaterial({ color: 0x88643f, roughness: 0.92 })
+);
+batterBoxDirt.rotation.x = -Math.PI / 2;
+batterBoxDirt.position.set(0, 0.013, 1.4);
+scene.add(batterBoxDirt);
+
+const chalkMat = new THREE.MeshBasicMaterial({ color: 0xf8f8f3 });
+function addChalk(x, z, w, h) {
+  const c = new THREE.Mesh(new THREE.PlaneGeometry(w, h), chalkMat);
+  c.rotation.x = -Math.PI / 2;
+  c.position.set(x, 0.016, z);
+  scene.add(c);
+}
+
+// left/right batter box outlines
+addChalk(-1.65, 1.38, 0.08, 2.7);
+addChalk(-0.85, 1.38, 0.08, 2.7);
+addChalk(-1.25, 0.03, 0.88, 0.08);
+addChalk(-1.25, 2.73, 0.88, 0.08);
+
+addChalk(1.65, 1.38, 0.08, 2.7);
+addChalk(0.85, 1.38, 0.08, 2.7);
+addChalk(1.25, 0.03, 0.88, 0.08);
+addChalk(1.25, 2.73, 0.88, 0.08);
 
 function addBase(x, z) {
   const base = new THREE.Mesh(
@@ -460,8 +487,8 @@ addSimplePlayer(0, -BASE_PATH * 2.55, Math.PI, 0xdfe6f4, 0x4a5b73); // CF
 // ------------------------------------------------------------
 // STRIKE ZONE + PCI
 // ------------------------------------------------------------
-const STRIKE_ZONE_CENTER_Y = 1.35;
-const STRIKE_ZONE_CENTER_Z = -2.8;
+const STRIKE_ZONE_CENTER_Y = 1.16;
+const STRIKE_ZONE_SCREEN_OCCUPANCY = 0.58; // keep margins above/below
 
 const strikeZone = {
   center: new THREE.Vector3(),
@@ -479,10 +506,17 @@ scene.add(zoneFill);
 
 const zoneEdges = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
-  new THREE.LineBasicMaterial({ color: 0xeef8ff, depthTest: false, transparent: true, opacity: 0.96 })
+  new THREE.LineBasicMaterial({ color: 0xf2f7ff, depthTest: false, transparent: true, opacity: 0.95 })
 );
-zoneEdges.renderOrder = 20;
+zoneEdges.renderOrder = 998;
 scene.add(zoneEdges);
+
+const zoneOuterEdges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04, 1.04, 1.02)),
+  new THREE.LineBasicMaterial({ color: 0xd7e9ff, depthTest: false, transparent: true, opacity: 0.45 })
+);
+zoneOuterEdges.renderOrder = 997;
+scene.add(zoneOuterEdges);
 
 const pciGroup = new THREE.Group();
 const wedgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.96 });
@@ -510,10 +544,10 @@ function rebuildPciGeometry() {
     m.geometry.dispose();
   }
 
-  outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.25, activeConfig.pciRadius * 1.98, 30, 1, Math.PI * 0.62, Math.PI * 0.86), wedgeMat.clone());
-  outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 2.25, activeConfig.pciRadius * 1.98, 30, 1, Math.PI * 1.52, Math.PI * 0.86), wedgeMat.clone());
-  innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.32, activeConfig.pciRadius * 1.12, 24, 1, Math.PI * 0.72, Math.PI * 0.58), wedgeMat.clone());
-  innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.32, activeConfig.pciRadius * 1.12, 24, 1, Math.PI * 1.84, Math.PI * 0.58), wedgeMat.clone());
+  outerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.92, activeConfig.pciRadius * 1.72, 30, 1, Math.PI * 0.62, Math.PI * 0.84), wedgeMat.clone());
+  outerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.92, activeConfig.pciRadius * 1.72, 30, 1, Math.PI * 1.54, Math.PI * 0.84), wedgeMat.clone());
+  innerLeft = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.18, activeConfig.pciRadius * 1.02, 24, 1, Math.PI * 0.72, Math.PI * 0.56), wedgeMat.clone());
+  innerRight = new THREE.Mesh(new THREE.RingGeometry(activeConfig.pciRadius * 1.18, activeConfig.pciRadius * 1.02, 24, 1, Math.PI * 1.86, Math.PI * 0.56), wedgeMat.clone());
 
   pciDot = new THREE.Mesh(
     new THREE.BoxGeometry(0.058, 0.058, 0.002),
@@ -552,7 +586,11 @@ function applyStrikeZoneAndPciConfig() {
   strikeZone.height = activeConfig.strikeZoneHeight;
   strikeZone.depth = activeConfig.strikeZoneDepth;
 
-  strikeZone.center.set(0, STRIKE_ZONE_CENTER_Y, STRIKE_ZONE_CENTER_Z);
+  const fovRad = THREE.MathUtils.degToRad(camera.fov);
+  const targetDist = (strikeZone.height / STRIKE_ZONE_SCREEN_OCCUPANCY) / (2 * Math.tan(fovRad / 2));
+  const zoneDist = THREE.MathUtils.clamp(targetDist, 1.8, 2.8);
+  strikeZone.center.set(0, STRIKE_ZONE_CENTER_Y, camera.position.z - zoneDist);
+  camera.lookAt(0, STRIKE_ZONE_CENTER_Y, strikeZone.center.z);
 
   zoneFill.geometry.dispose();
   zoneFill.geometry = new THREE.BoxGeometry(strikeZone.width, strikeZone.height, strikeZone.depth);
@@ -561,6 +599,10 @@ function applyStrikeZoneAndPciConfig() {
   zoneEdges.geometry.dispose();
   zoneEdges.geometry = new THREE.EdgesGeometry(zoneFill.geometry);
   zoneEdges.position.copy(strikeZone.center);
+
+  zoneOuterEdges.geometry.dispose();
+  zoneOuterEdges.geometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(strikeZone.width * 1.03, strikeZone.height * 1.03, strikeZone.depth * 1.02));
+  zoneOuterEdges.position.copy(strikeZone.center);
 
   pciPlane.constant = -(strikeZone.center.z + strikeZone.depth * 0.55);
 
@@ -878,9 +920,16 @@ function drawMinimap() {
 
   const homeX = w * 0.5;
   const homeY = h - 10;
-  const mapScale = OUTFIELD_RADIUS / (h * 0.72);
+  const mapScale = OUTFIELD_RADIUS / (h * 0.68);
 
   // Outfield fence arc
+  mapCtx.fillStyle = 'rgba(46, 128, 71, 0.55)';
+  mapCtx.beginPath();
+  mapCtx.moveTo(homeX, homeY);
+  mapCtx.arc(homeX, homeY, OUTFIELD_RADIUS / mapScale, Math.PI * 1.22, Math.PI * 1.78);
+  mapCtx.closePath();
+  mapCtx.fill();
+
   mapCtx.strokeStyle = '#7ad090';
   mapCtx.lineWidth = 2;
   mapCtx.beginPath();
@@ -891,9 +940,10 @@ function drawMinimap() {
   mapCtx.strokeStyle = '#d8e4f5';
   mapCtx.beginPath();
   mapCtx.moveTo(homeX, homeY);
-  mapCtx.lineTo(homeX + 34, homeY - 34);
+  const foulLen = OUTFIELD_RADIUS / mapScale * 0.92;
+  mapCtx.lineTo(homeX + foulLen * 0.71, homeY - foulLen * 0.71);
   mapCtx.moveTo(homeX, homeY);
-  mapCtx.lineTo(homeX - 34, homeY - 34);
+  mapCtx.lineTo(homeX - foulLen * 0.71, homeY - foulLen * 0.71);
   mapCtx.stroke();
 
 
