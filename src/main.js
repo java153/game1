@@ -703,11 +703,6 @@ function updateBatSwing(nowMs) {
     batPivot.position.lerpVectors(batFollowPos, batIdlePos, a);
   }
 
-  const inContactPhase = t >= activeConfig.contactWindowStart && t <= activeConfig.contactWindowEnd;
-  if (inContactPhase && !swingContactResolved) {
-    tryResolveContact();
-  }
-
   if (t >= 1) {
     isSwinging = false;
     batPivot.rotation.copy(batIdleRot);
@@ -724,6 +719,13 @@ function getBatSweetSpotWorld() {
   return batPivot.localToWorld(new THREE.Vector3(1.34, -0.08, -0.2));
 }
 
+
+function isSwingInContactWindow(nowMs = performance.now()) {
+  if (!isSwinging || swingContactResolved) return false;
+  const t = THREE.MathUtils.clamp((nowMs - swingStartMs) / activeConfig.swingDurationMs, 0, 1);
+  return t >= activeConfig.contactWindowStart && t <= activeConfig.contactWindowEnd;
+}
+
 // ------------------------------------------------------------
 // PHYSICS WORLD
 // ------------------------------------------------------------
@@ -734,10 +736,17 @@ world.solver.tolerance = 1e-4;
 
 const ballMaterial = new CANNON.Material('ball');
 const groundMaterial = new CANNON.Material('ground');
+const batMaterial = new CANNON.Material('bat');
 world.addContactMaterial(
   new CANNON.ContactMaterial(ballMaterial, groundMaterial, {
     restitution: activeConfig.restitution,
     friction: activeConfig.friction
+  })
+);
+world.addContactMaterial(
+  new CANNON.ContactMaterial(ballMaterial, batMaterial, {
+    restitution: 0.56,
+    friction: 0.35
   })
 );
 
@@ -751,16 +760,78 @@ const ballBody = new CANNON.Body({
   mass: 0.145,
   shape: new CANNON.Sphere(ballRadius),
   material: ballMaterial,
-  linearDamping: 0.01,
-  angularDamping: 0.01
+  linearDamping: 0.006,
+  angularDamping: 0.018
 });
 world.addBody(ballBody);
 
+const batBody = new CANNON.Body({
+  mass: 0,
+  type: CANNON.Body.KINEMATIC,
+  material: batMaterial,
+  collisionResponse: true
+});
+batBody.addShape(new CANNON.Box(new CANNON.Vec3(0.78, 0.065, 0.065)));
+batBody.collisionFilterGroup = 2;
+batBody.collisionFilterMask = 1;
+world.addBody(batBody);
+
+const batWorldPos = new THREE.Vector3();
+const batWorldQuat = new THREE.Quaternion();
+const batPrevPos = new CANNON.Vec3();
+const batVel = new CANNON.Vec3();
+
+function syncBatBody(dt) {
+  batMesh.getWorldPosition(batWorldPos);
+  batMesh.getWorldQuaternion(batWorldQuat);
+
+  const targetPos = new CANNON.Vec3(batWorldPos.x, batWorldPos.y, batWorldPos.z);
+  if (dt > 0) {
+    targetPos.vsub(batPrevPos, batVel);
+    batVel.scale(1 / dt, batVel);
+  } else {
+    batVel.setZero();
+  }
+
+  batBody.position.copy(targetPos);
+  batBody.velocity.copy(batVel);
+  batBody.collisionResponse = isSwinging;
+  batBody.quaternion.set(batWorldQuat.x, batWorldQuat.y, batWorldQuat.z, batWorldQuat.w);
+  batPrevPos.copy(targetPos);
+}
+
 const ballMesh = new THREE.Mesh(
   new THREE.SphereGeometry(ballRadius, 24, 24),
-  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, emissive: 0x1f2430, emissiveIntensity: 0.42 })
 );
 scene.add(ballMesh);
+
+const TRAIL_POINTS = 90;
+const trailHistory = [];
+const ballTrail = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0xfef7bf, transparent: true, opacity: 0.75, depthTest: false })
+);
+ballTrail.renderOrder = 996;
+scene.add(ballTrail);
+
+function updateBallTrail() {
+  if (!ballWasHit) {
+    if (trailHistory.length) {
+      trailHistory.length = 0;
+      ballTrail.geometry.setFromPoints([ballMesh.position, ballMesh.position]);
+    }
+    return;
+  }
+  trailHistory.push(new THREE.Vector3(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z));
+  if (trailHistory.length > TRAIL_POINTS) trailHistory.shift();
+  if (trailHistory.length >= 2) {
+    ballTrail.geometry.setFromPoints(trailHistory);
+  }
+}
+
+syncBatBody(0);
+batPrevPos.copy(batBody.position);
 
 // ------------------------------------------------------------
 // AUDIO (procedural + simple background music)
@@ -1083,6 +1154,8 @@ function queueBallAtMound() {
   pitchInFlight = false;
   ballWasHit = false;
   ballLandingTracked = false;
+  trailHistory.length = 0;
+  ballTrail.geometry.setFromPoints([new THREE.Vector3(spawnPos.x, spawnPos.y, spawnPos.z), new THREE.Vector3(spawnPos.x, spawnPos.y, spawnPos.z)]);
 }
 
 function launchPitch() {
@@ -1191,50 +1264,103 @@ function classifyContact(pciDist, timingDist, batDist) {
   return 'WEAK';
 }
 
-function tryResolveContact() {
+const tmpNormal = new CANNON.Vec3();
+const tmpRel = new CANNON.Vec3();
+const tmpBatVel = new CANNON.Vec3();
+const tmpOut = new CANNON.Vec3();
+let lastContactMs = -1000;
+
+function resolveBatBallCollision(contactEvent) {
+  if (!pitchInFlight || swingContactResolved || !isSwingInContactWindow()) return;
+
   const timingDist = Math.abs(ballBody.position.z - strikeZone.center.z);
-  if (timingDist > activeConfig.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.6) {
-    return;
-  }
+  if (timingDist > activeConfig.swingWindowZ || ballBody.position.z > strikeZone.center.z + 0.6) return;
 
   const pciDist = pciBallDistance();
   if (pciDist > activeConfig.goodPciDist * 2.0) return;
 
   const sweetSpot = getBatSweetSpotWorld();
   const batDist = sweetSpot.distanceTo(ballMesh.position);
-  if (batDist > activeConfig.goodBatDist * 1.95) return;
+  if (batDist > activeConfig.goodBatDist * 2.05) return;
 
-  swingContactResolved = true;
-  swingMissQueued = false;
-  ballWasHit = true;
+  const nowMs = performance.now();
+  if (nowMs - lastContactMs < 120) return;
+  lastContactMs = nowMs;
 
   const quality = classifyContact(pciDist, timingDist, batDist);
-
   const xInfluence = THREE.MathUtils.clamp(pciOffsetX / (strikeZone.width * 0.5), -1, 1);
   const yInfluence = THREE.MathUtils.clamp(pciOffsetY / (strikeZone.height * 0.5), -1, 1);
   const timingScale = 1 - THREE.MathUtils.clamp(timingDist / activeConfig.hitPlaneTolerance, 0, 1);
 
-  let impulseMag = activeConfig.weakImpulse;
-  if (quality === 'GOOD') impulseMag = activeConfig.goodImpulse;
-  if (quality === 'PERFECT') impulseMag = activeConfig.perfectImpulse;
+  const qualityScale = quality === 'PERFECT' ? 1 : quality === 'GOOD' ? 0.82 : 0.66;
+  const contactR = quality === 'PERFECT' ? 0.62 : quality === 'GOOD' ? 0.56 : 0.48;
 
-  const hitDir = new CANNON.Vec3(
-    xInfluence * 0.82,
-    0.82 + yInfluence * 0.62 + timingScale * 0.2,
-    1.05 - Math.abs(xInfluence) * 0.14
-  );
-  hitDir.normalize();
-  hitDir.scale(impulseMag * (0.82 + timingScale * 0.35), hitDir);
+  const cp = contactEvent.contact;
+  if (cp) {
+    if (cp.bi === ballBody) tmpNormal.copy(cp.ni);
+    else cp.ni.scale(-1, tmpNormal);
+  } else {
+    ballBody.position.vsub(batBody.position, tmpNormal);
+    if (tmpNormal.lengthSquared() < 1e-6) tmpNormal.set(0, 0.2, 1);
+  }
+  tmpNormal.normalize();
 
-  const preSpeed = ballBody.velocity.length();
-  if (preSpeed > 42) ballBody.velocity.scale(42 / preSpeed, ballBody.velocity);
+  // Blend physical normal with player aiming influences.
+  const aimNormal = new CANNON.Vec3(xInfluence * 0.55, 0.35 + yInfluence * 0.5 + timingScale * 0.25, 1.05);
+  aimNormal.normalize();
+  tmpNormal.scale(0.68, tmpOut);
+  aimNormal.scale(0.32, aimNormal);
+  tmpOut.vadd(aimNormal, tmpNormal);
+  tmpNormal.normalize();
 
-  ballBody.applyImpulse(hitDir, ballBody.position);
+  tmpBatVel.copy(batBody.velocity);
+  tmpBatVel.y += 0.9 + yInfluence * 1.2;
+
+  tmpBatVel.vsub(ballBody.velocity, tmpRel);
+  const relAlongNormal = tmpRel.dot(tmpNormal);
+  if (relAlongNormal <= 0.5) return;
+
+  const normalImpulseSpeed = (1 + contactR) * relAlongNormal;
+  tmpNormal.scale(normalImpulseSpeed * qualityScale, tmpOut);
+
+  // Tangential bat motion contributes to spray and carry.
+  const tangent = tmpBatVel.clone();
+  const proj = tmpNormal.dot(tangent);
+  tmpNormal.scale(proj, aimNormal);
+  tangent.vsub(aimNormal, tangent);
+  tangent.scale(0.26 + timingScale * 0.08, tangent);
+  tmpOut.vadd(tangent, tmpOut);
+
+  ballBody.velocity.vadd(tmpOut, ballBody.velocity);
+
+  // Clamp to realistic exit velocity range (mph -> m/s).
+  const minExit = 26.8; // 60 mph
+  const maxExit = 51.4; // 115 mph
+  const newSpeed = ballBody.velocity.length();
+  const targetMin = quality === 'WEAK' ? minExit * 0.75 : minExit;
+  const clamped = THREE.MathUtils.clamp(newSpeed, targetMin, maxExit);
+  if (newSpeed > 1e-6) ballBody.velocity.scale(clamped / newSpeed, ballBody.velocity);
+
+  // Spin from vertical offset + side offset.
+  const backSpin = (18 + 26 * timingScale + 22 * yInfluence) * qualityScale;
+  const sideSpin = (-xInfluence * 34) * (0.8 + timingScale * 0.4);
+  ballBody.angularVelocity.set(backSpin, sideSpin, sideSpin * 0.28);
+
+  swingContactResolved = true;
+  swingMissQueued = false;
+  ballWasHit = true;
+  pitchInFlight = true;
 
   const exitMph = ballBody.velocity.length() * 2.23694;
   showResult(quality, exitMph);
   playHitSound(quality !== 'WEAK');
 }
+
+ballBody.addEventListener('collide', (event) => {
+  const other = event.body;
+  if (other !== batBody) return;
+  resolveBatBallCollision(event);
+});
 
 function handleBallLanding() {
   if (!ballWasHit || ballLandingTracked) return;
@@ -1264,6 +1390,29 @@ function handleBallLanding() {
   updateScoreText();
 }
 
+function applyFlightAerodynamics() {
+  if (!ballWasHit) return;
+  const v = ballBody.velocity;
+  const speed = v.length();
+  if (speed < 0.1) return;
+
+  const dragCoeff = 0.0032;
+  const dragScale = -dragCoeff * speed;
+  ballBody.force.x += v.x * dragScale;
+  ballBody.force.y += v.y * dragScale;
+  ballBody.force.z += v.z * dragScale;
+
+  // Simple Magnus lift from spin cross velocity.
+  const omega = ballBody.angularVelocity;
+  const magnusCoeff = 0.00085;
+  const mx = omega.y * v.z - omega.z * v.y;
+  const my = omega.z * v.x - omega.x * v.z;
+  const mz = omega.x * v.y - omega.y * v.x;
+  ballBody.force.x += mx * magnusCoeff;
+  ballBody.force.y += my * magnusCoeff;
+  ballBody.force.z += mz * magnusCoeff;
+}
+
 function maybeAutoMiss() {
   if (!swingUsedThisPitch && pitchInFlight && ballBody.position.z > strikeZone.center.z + 0.72) {
     swingUsedThisPitch = true;
@@ -1277,10 +1426,19 @@ function maybeAutoMiss() {
 // LOOP HELPERS
 // ------------------------------------------------------------
 function shouldResetBallOutOfPlay() {
+  if (!pitchInFlight) return false;
+  if (ballWasHit) {
+    return (
+      ballBody.position.y < -6 ||
+      Math.abs(ballBody.position.x) > 150 ||
+      Math.abs(ballBody.position.z) > 190 ||
+      (ballLandingTracked && ballBody.velocity.length() < 1.2 && ballBody.position.y < 0.2)
+    );
+  }
   return (
-    ballBody.position.z > 18 ||
-    Math.abs(ballBody.position.x) > 24 ||
-    Math.abs(ballBody.position.z) > 48 ||
+    ballBody.position.z > 20 ||
+    Math.abs(ballBody.position.x) > 28 ||
+    Math.abs(ballBody.position.z) > 60 ||
     ballBody.position.y < -4
   );
 }
@@ -1312,6 +1470,8 @@ function animate() {
   accumulator += deltaTime;
 
   while (accumulator >= fixedDt) {
+    syncBatBody(fixedDt);
+    applyFlightAerodynamics();
     world.step(fixedDt, deltaTime, maxSubSteps);
     accumulator -= fixedDt;
   }
@@ -1331,6 +1491,7 @@ function animate() {
 
   ballMesh.position.copy(ballBody.position);
   ballMesh.quaternion.copy(ballBody.quaternion);
+  updateBallTrail();
 
   updatePciColor();
   renderer.render(scene, camera);
